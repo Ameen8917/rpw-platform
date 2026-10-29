@@ -1,6 +1,7 @@
-import { col, fn, Op, QueryTypes, where, type CreationAttributes, type Transaction, type WhereOptions } from "sequelize";
+import { col, fn, Op, QueryTypes, where, type CreationAttributes, type Includeable, type Transaction, type WhereOptions } from "sequelize";
+import { StoredFile } from "../files/files.models.js";
 import type { AssetScope, AssetSource, AssetStatus } from "./asset-rules.js";
-import { Asset, AssetAccessory, AssetCodeSequence } from "./assets.models.js";
+import { Asset, AssetAccessory, AssetCodeSequence, CustodyEvent } from "./assets.models.js";
 
 export interface AssetFilter {
   scope: AssetScope;
@@ -10,7 +11,28 @@ export interface AssetFilter {
   status?: AssetStatus;
 }
 
-const withAccessories = { model: AssetAccessory, as: "accessories" };
+export interface CustodyFilter {
+  scope: AssetScope;
+  dealershipId?: string;
+  deptId?: string;
+  facilityId?: string;
+  userId?: string;
+}
+
+/* Everything an AssetDto needs: accessories, and the custody events behind its current state */
+/* Factories, not shared objects: Sequelize mutates include definitions while building a query */
+const withSignature = () => ({ model: StoredFile, as: "signatureFile", attributes: ["id", "path"] });
+const standard = (): Includeable[] => [
+  { model: AssetAccessory, as: "accessories" },
+  { model: CustodyEvent, as: "custodyEvent" },
+  { model: CustodyEvent, as: "acceptanceEvent", include: [withSignature()] },
+  { model: CustodyEvent, as: "returnEvent", include: [withSignature()] },
+];
+/* Detail adds the full custody history, newest first */
+const detail = (): Includeable[] => [
+  ...standard(),
+  { model: CustodyEvent, as: "custodyHistory", separate: true, order: [["at", "DESC"]], include: [withSignature()] },
+];
 
 /* LIKE treats % and _ as wildcards; search text is matched literally */
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => "\\" + c);
@@ -20,13 +42,15 @@ const quotedTable = (model: { getTableName(): string | object }) => {
   return typeof t === "string" ? `"${t}"` : `"${t.schema}"."${t.tableName}"`;
 };
 
+const scoped = (scope: AssetScope): WhereOptions<Asset>[] =>
+  scope.all ? [] : [{ dealershipId: { [Op.in]: scope.dealershipIds } }];
+
 /* Database access for the asset module. Only this file touches the asset models. */
 export const assetRepository = {
   transaction: <T>(work: (t: Transaction) => Promise<T>) => Asset.sequelize!.transaction(work),
 
   list: (f: AssetFilter) => {
-    const conditions: WhereOptions<Asset>[] = [];
-    if (!f.scope.all) conditions.push({ dealershipId: { [Op.in]: f.scope.dealershipIds } });
+    const conditions = scoped(f.scope);
     if (f.dealershipId) conditions.push({ dealershipId: f.dealershipId });
     if (f.source) conditions.push({ source: f.source });
     if (f.status) conditions.push({ status: f.status });
@@ -34,16 +58,43 @@ export const assetRepository = {
       const like = `%${escapeLike(f.q)}%`;
       conditions.push({ [Op.or]: [{ name: { [Op.iLike]: like } }, { code: { [Op.iLike]: like } }, { make: { [Op.iLike]: like } }] });
     }
-    return Asset.findAll({ where: { [Op.and]: conditions }, include: [withAccessories], order: [["createdAt", "DESC"], ["code", "ASC"]] });
+    return Asset.findAll({ where: { [Op.and]: conditions }, include: standard(), order: [["createdAt", "DESC"], ["code", "ASC"]] });
   },
 
-  findById: (id: string, transaction?: Transaction) => Asset.findByPk(id, { include: [withAccessories], transaction }),
+  /* Assets held by individuals (custody register) */
+  listIssued: (f: CustodyFilter) => {
+    const conditions = scoped(f.scope);
+    conditions.push({ assignedTo: { [Op.ne]: null } }, { status: { [Op.ne]: "disposed" } });
+    if (f.dealershipId) conditions.push({ dealershipId: f.dealershipId });
+    if (f.deptId) conditions.push({ deptId: f.deptId });
+    if (f.facilityId) conditions.push({ facilityId: f.facilityId });
+    if (f.userId) conditions.push({ assignedTo: f.userId });
+    return Asset.findAll({ where: { [Op.and]: conditions }, include: standard(), order: [["code", "ASC"]] });
+  },
+
+  findById: (id: string, transaction?: Transaction) => Asset.findByPk(id, { include: detail(), transaction }),
 
   /* Exact, case-insensitive (scanners and people type codes in either case) */
   findByCode: (code: string) =>
-    Asset.findOne({ where: where(fn("lower", col("code")), code.toLowerCase()), include: [withAccessories] }),
+    Asset.findOne({ where: where(fn("lower", col("code")), code.toLowerCase()), include: detail() }),
 
-  findByTagId: (tagId: number) => Asset.findOne({ where: { tagId }, include: [withAccessories] }),
+  findByTagId: (tagId: number) => Asset.findOne({ where: { tagId }, include: detail() }),
+
+  /* Locks the asset row until the transaction ends, so custody changes on one asset run one at a time */
+  lockById: (id: string, transaction: Transaction) => Asset.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE }),
+
+  accessoriesOf: (assetId: string, transaction: Transaction) =>
+    AssetAccessory.findAll({ where: { assetId }, order: [["position", "ASC"]], transaction }),
+
+  findEvent: (id: string, transaction: Transaction) => CustodyEvent.findByPk(id, { transaction }),
+
+  createEvent: (e: CreationAttributes<CustodyEvent>, transaction: Transaction) => CustodyEvent.create(e, { transaction }),
+
+  updateCustody: (
+    asset: Asset,
+    fields: Pick<CreationAttributes<Asset>, "assignedTo" | "issuedBy" | "issuedAt" | "custodyEventId" | "acceptanceEventId" | "returnEventId">,
+    transaction: Transaction,
+  ) => asset.update(fields, { transaction }),
 
   /* Takes the next number for a code prefix. The upsert holds the row lock until the caller's
      transaction ends, so concurrent adds under one prefix queue up rather than collide; if the

@@ -4,7 +4,10 @@ import { describeDatabaseUrl, EnvError, loadEnv } from "./config/env.js";
 import { initModels } from "./db/models.js";
 import { createSequelize } from "./db/sequelize.js";
 import { createAssetService } from "./modules/assets/assets.service.js";
+import { createCustodyService } from "./modules/assets/custody.service.js";
 import { createAuditService } from "./modules/audit/audit.service.js";
+import { createFilesService } from "./modules/files/files.service.js";
+import { createSupabaseStorage, createUnconfiguredStorage } from "./modules/files/storage.js";
 import { createAuthService } from "./modules/auth/auth.service.js";
 import { createOrgService } from "./modules/org/org.service.js";
 
@@ -21,12 +24,20 @@ async function main() {
     console.error(`Database not reachable at startup: ${(err as Error).message}`);
   }
 
+  const storage = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+    ? createSupabaseStorage({ url: env.SUPABASE_URL, serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, bucket: env.SUPABASE_STORAGE_BUCKET })
+    : createUnconfiguredStorage();
+  if (!env.SUPABASE_URL) console.warn("Supabase Storage is not configured: saving signatures will answer 503 (docs/supabase-setup.md).");
+  const files = createFilesService({ storage, bucket: env.SUPABASE_STORAGE_BUCKET });
+  const assets = createAssetService({ files });
+
   const app = createApp({
     corsOrigin: env.CORS_ORIGIN,
     checkDatabase: () => sequelize.query("SELECT 1"),
     auth: createAuthService({ sessionSecret: env.SESSION_SECRET, sessionTtlHours: env.SESSION_TTL_HOURS }),
     org: createOrgService(),
-    assets: createAssetService(),
+    assets,
+    custody: createCustodyService({ assets, files }),
     audit: createAuditService(),
     cookie: { secure: env.NODE_ENV === "production" },
     devLoginEnabled: env.DEV_LOGIN_ENABLED,

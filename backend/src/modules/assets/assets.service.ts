@@ -3,9 +3,10 @@ import { HttpError } from "../../lib/http-error.js";
 import { auditRepository, type AuditRepository } from "../audit/audit.repository.js";
 import { toAuditEntryDto } from "../audit/audit.dto.js";
 import type { AuthContext } from "../auth/auth.service.js";
+import type { FilesService } from "../files/files.service.js";
 import { orgRepository, type OrgRepository } from "../org/org.repository.js";
 import { assetCode, assetCodePrefix, assetScope, inrFull, inScope, todayIST, type AssetSource, type AssetStatus } from "./asset-rules.js";
-import { toAssetDto, type AssetDetailDto } from "./assets.dto.js";
+import { signaturePaths, toAssetDto, toCustodyEventDto, type AssetDetailDto } from "./assets.dto.js";
 import type { Asset } from "./assets.models.js";
 import { assetRepository, type AssetRepository } from "./assets.repository.js";
 import type { CreateAssetInput } from "./assets.schemas.js";
@@ -14,6 +15,8 @@ export interface AssetServiceOptions {
   assetRepo?: AssetRepository;
   orgRepo?: OrgRepository;
   auditRepo?: AuditRepository;
+  /** Signs signature image URLs in detail responses; without it they are null */
+  files?: Pick<FilesService, "signedUrls">;
   now?: () => Date;
 }
 
@@ -27,16 +30,27 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
   const auditRepo = opts.auditRepo ?? auditRepository;
   const today = () => todayIST((opts.now ?? (() => new Date()))());
 
-  /* Assets outside the user's scope are reported as not found, so their existence is not revealed */
+  /* Assets outside the user's scope are reported as not found, so their existence is not revealed.
+     People can always see what they hold. */
   const visible = (auth: AuthContext, a: Asset | null): Asset => {
-    if (!a || !inScope(assetScope(auth), a.dealershipId)) throw HttpError.notFound("Asset not found");
+    if (!a || !(inScope(assetScope(auth), a.dealershipId) || a.assignedTo === auth.user.id)) {
+      throw HttpError.notFound("Asset not found");
+    }
     return a;
   };
 
+  /* `a` must be loaded with findById / findByCode / findByTagId (custody history included) */
   async function detail(a: Asset): Promise<AssetDetailDto> {
     const refs = a.reqRef ? [a.code, a.reqRef] : [a.code];
-    const activity = await auditRepo.list({ refs, limit: 100 });
-    return { ...toAssetDto(a, today()), activity: activity.map(toAuditEntryDto) };
+    const [activity, urls] = await Promise.all([
+      auditRepo.list({ refs, limit: 100 }),
+      opts.files ? opts.files.signedUrls(signaturePaths(a)) : Promise.resolve(new Map<string, string>()),
+    ]);
+    return {
+      ...toAssetDto(a, today(), urls),
+      custodyHistory: (a.custodyHistory ?? []).map((e) => toCustodyEventDto(e, urls)),
+      activity: activity.map(toAuditEntryDto),
+    };
   }
 
   return {
@@ -101,6 +115,14 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
             position: i + 1, name, serial: "—", origin: "bundled" as const, cost: 0,
             addedAt: input.purchaseDate ?? date, createdBy: auth.user.id,
           })), t);
+          if (input.assignedTo) {
+            /* Named at registration: custody starts unacknowledged (method null), as in the prototype */
+            const issue = await assetRepo.createEvent({
+              assetId: asset.id, kind: "issue", holderId: input.assignedTo, actorId: auth.user.id, method: null,
+              snapshot: [input.name, ...input.bundled], signatureFileId: null, note: null, condition: null, missing: [],
+            }, t);
+            await assetRepo.updateCustody(asset, { custodyEventId: issue.id }, t);
+          }
           await auditRepo.record({
             actorId: auth.user.id, action: "Added existing asset", ref: code,
             detail: `Opening stock · ${inrFull(input.cost)} · ${dealership.name}`,

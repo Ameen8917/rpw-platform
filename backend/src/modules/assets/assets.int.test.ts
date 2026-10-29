@@ -39,14 +39,15 @@ describe.skipIf(!env)("assets API (test database)", () => {
   });
   afterAll(() => sequelize?.close());
 
-  /* Read tests run first, against the 14 seeded assets */
+  /* Read tests run first, against the seeded assets. Other test files add assets of their own
+     (custody tests use Mahindra Chikalthana), so counts here avoid that dealership. */
   describe("register", () => {
     const codes = (res: request.Response) => (res.body as { code: string }[]).map((a) => a.code).sort();
 
     it("shows the Director every asset", async () => {
       const res = await get(DIRECTOR, "/api/assets");
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(14);
+      expect(codes(res)).toEqual(expect.arrayContaining(SEED_ASSETS.map((a) => a.code)));
     });
 
     it("scopes a Business Head to their dealerships and a manager to theirs", async () => {
@@ -144,14 +145,20 @@ describe.skipIf(!env)("assets API (test database)", () => {
       expect(res.status).toBe(201);
       expect(res.headers.location).toBe(`/api/assets/${res.body.id}`);
       expect(res.body).toMatchObject({
-        code: "RPW/JNS/IT/26-27/0001", tagId: "100015", source: "existing", status: "in_use",
+        code: "RPW/JNS/IT/26-27/0001", source: "existing", status: "in_use",
         dealershipId: "D_JCB_NSK", deptId: "DEP_SER",
         /* no location given: placed where the holder works */
         facilityId: "F01", assignedTo: "S_001", issuedBy: "U_ARJ",
         accessories: [{ name: "Charger", origin: "bundled", addedAt: "2026-09-06" }, { name: "Laptop bag" }],
         invoiceDoc: { invoiceNo: "LN/2026/118" },
       });
+      expect(Number(res.body.tagId)).toBeGreaterThan(100014); // after the seeded tags
       expect(res.body.verified).toBeUndefined();
+      /* custody starts at registration, unacknowledged */
+      expect(res.body.acceptance).toBeNull();
+      expect(res.body.custodyHistory).toEqual([expect.objectContaining({
+        kind: "issue", holderId: "S_001", actorId: "U_ARJ", method: null, snapshot: ["Workshop Laptop", "Charger", "Laptop bag"],
+      })]);
       expect(res.body.activity).toEqual([expect.objectContaining({
         actorId: "U_ARJ", action: "Added existing asset", ref: "RPW/JNS/IT/26-27/0001",
         detail: "Opening stock · ₹58,000 · JCB Nashik",

@@ -7,15 +7,17 @@ Ratnapprabbha World (RPW) internal operations platform for a multi-brand automot
 
 Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Behaviour is unchanged: all state still lives in memory in `frontend/src/App.tsx` and resets on reload. Asset Management is the first module moving to the backend; its spec, decisions and milestones are in `docs/asset-management.md`.
 
-`backend/` (Express 5 + TypeScript, strict) is at milestone M3: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations` (each runs in a transaction), JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
+`backend/` (Express 5 + TypeScript, strict) is at milestone M4: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations` (each runs in a transaction), JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
 
 Backend modules live in `src/modules/<name>/` split into `*.models.ts`, `*.repository.ts` (only place that touches models), `*.service.ts`, `*.controller.ts`, `*.routes.ts`, `*.schemas.ts`, `*.dto.ts`. DTOs match `frontend/src/types`.
 - `org`: dealerships, facilities, departments, users (text IDs from the prototype, e.g. `D_JCB_NSK`). Read-only `GET /api/org/*`.
 - `auth`: employee code + password (scrypt), server-side sessions in an httpOnly SameSite=Strict cookie; the DB stores only HMAC(SESSION_SECRET, token). `permissionsFor()` ports the prototype's `P()`; powers the prototype tied to user IDs are `users.grants`. `requireAuth` puts `{ user, permissions }` on `res.locals.auth`. `DEV_LOGIN_ENABLED` mounts `/api/auth/dev/*` ("sign in as"), refused in production.
 - `assets`: register, detail, lookup (code or tag ID), add existing asset. Pure rules (code format, FY, depreciation, visibility scope) in `asset-rules.ts`, ported from `frontend/src/domain/assets.ts`; keep the two in step. Codes come from `asset_code_sequences` via an upsert inside the insert's transaction. Out-of-scope assets are 404. Asset IDs are UUIDs.
+- `assets` custody (`custody.*.ts`): issue / accept / return as rows in `asset_custody_events`; the asset points at its current issue (`custody_event_id`), the event that acknowledged it, and its last return. Changes lock the asset row (`lockById`) and re-check state inside the transaction. `GET /api/custody` is the register.
+- `files`: Supabase Storage via its REST API (`storage.ts`, no SDK), private bucket, service role key only on the server. Upload first, then `record()` the file row inside the action's transaction, `discard()` on failure. Responses carry 10-minute signed URLs. Tests use `createMemoryStorage()`; unconfigured storage answers 503 on upload.
 - `audit`: append-only `audit_log` (a trigger rejects UPDATE/DELETE). Write entries with `auditRepository.record(entry, transaction)` inside the action's transaction. `GET /api/audit` needs `canSeeAudit`.
 
-Sequelize mutates attribute definitions (it writes the column name into them), so never share one definition object between columns; use a factory (`userRef()`).
+Sequelize mutates attribute definitions (it writes the column name into them), so never share one definition object between columns or between queries' `include` lists; use factories (`userRef()`, `standard()`).
 
 Seeds: org data is upserted; assets (`db/seed/asset-data.ts`, generated from the frontend seed) and audit entries are inserted only if missing, never overwritten.
 
@@ -30,7 +32,7 @@ Layout of `frontend/src`:
 
 TypeScript runs with `strict: false` during migration. Tighten it module by module, starting with `domain/` and `features/assets/`.
 
-Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check[:test]` (read-only connection test), `npm run db:migrate[:status]`, `npm run db:seed` (prototype org data, assets and audit entries; sets SEED_USER_PASSWORD only where no password exists). Manual API requests: `docs/api.http` (REST Client).
+Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check[:test]` (read-only connection test), `npm run db:migrate[:status]`, `npm run storage:check` (Supabase Storage bucket round trip), `npm run db:seed` (prototype org data, assets and audit entries; sets SEED_USER_PASSWORD only where no password exists). Manual API requests: `docs/api.http` (REST Client).
 
 
 # Project Instructions

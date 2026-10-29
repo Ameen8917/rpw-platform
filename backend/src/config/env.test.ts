@@ -58,6 +58,18 @@ describe("loadEnv", () => {
     }
   });
 
+  it("treats Supabase Storage as optional in development, but as a pair", () => {
+    const none = loadEnv(vars());
+    expect(none.SUPABASE_URL).toBeUndefined();
+    expect(none.SUPABASE_STORAGE_BUCKET).toBe("rpw-files");
+    const both = loadEnv(vars({ SUPABASE_URL: "https://abc.supabase.co/", SUPABASE_SERVICE_ROLE_KEY: "service-key" }));
+    expect(both.SUPABASE_URL).toBe("https://abc.supabase.co");
+    expect(() => loadEnv(vars({ SUPABASE_URL: "https://abc.supabase.co" }))).toThrow(/SUPABASE_SERVICE_ROLE_KEY: is required/);
+    expect(() => loadEnv(vars({ SUPABASE_SERVICE_ROLE_KEY: "service-key" }))).toThrow(/SUPABASE_URL: is required/);
+    expect(() => loadEnv(vars({ NODE_ENV: "production" }))).toThrow(/SUPABASE_URL: is required in production/);
+    expect(() => loadEnv(vars({ SUPABASE_STORAGE_BUCKET: "Bad Bucket" }))).toThrow(/SUPABASE_STORAGE_BUCKET/);
+  });
+
   it("parses DATABASE_SSL as a boolean", () => {
     expect(loadEnv(vars({ DATABASE_SSL: "false" })).DATABASE_SSL).toBe(false);
   });

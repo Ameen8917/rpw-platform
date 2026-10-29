@@ -26,9 +26,23 @@ const EnvSchema = z.object({
   SEED_USER_PASSWORD: z.string().min(8, "must be at least 8 characters").optional().or(z.literal("").transform(() => undefined)),
   /* "Sign in as" without a password, for development. Refused in production. */
   DEV_LOGIN_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+
+  /* Supabase Storage for signatures and invoice files. Only the backend talks to Storage.
+     Optional in development (saving a signature then answers 503); required in production. */
+  SUPABASE_URL: z.union([z.string().url("must be a URL, e.g. https://<project-ref>.supabase.co"), z.literal("")])
+    .optional().transform((v) => (v ? v.replace(/\/+$/, "") : undefined)),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
+  SUPABASE_STORAGE_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,62}$/, "must be a bucket name (lowercase, digits, . _ -)").default("rpw-files"),
 }).superRefine((env, ctx) => {
   if (env.NODE_ENV === "production" && env.DEV_LOGIN_ENABLED) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DEV_LOGIN_ENABLED"], message: "must not be true in production" });
+  }
+  if (!!env.SUPABASE_URL !== !!env.SUPABASE_SERVICE_ROLE_KEY) {
+    const missing = env.SUPABASE_URL ? "SUPABASE_SERVICE_ROLE_KEY" : "SUPABASE_URL";
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [missing], message: "is required when the other Supabase Storage variable is set" });
+  }
+  if (env.NODE_ENV === "production" && !env.SUPABASE_URL) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["SUPABASE_URL"], message: "is required in production (file storage)" });
   }
 });
 

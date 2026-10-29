@@ -14,7 +14,8 @@
     "db:check:test": "tsx src/scripts/db-check.ts --test",
     "db:migrate": "tsx src/scripts/migrate.ts up",
     "db:migrate:status": "tsx src/scripts/migrate.ts status",
-    "db:seed": "tsx src/scripts/seed.ts"
+    "db:seed": "tsx src/scripts/seed.ts",
+    "storage:check": "tsx src/scripts/storage-check.ts"
   },
   "dependencies": {
     "cors": "2.8.5",

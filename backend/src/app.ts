@@ -2,8 +2,9 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { errorHandler, notFound } from "./middleware/error-handler.js";
-import { assetRoutes } from "./modules/assets/assets.routes.js";
+import { assetRoutes, custodyRoutes } from "./modules/assets/assets.routes.js";
 import type { AssetService } from "./modules/assets/assets.service.js";
+import type { CustodyService } from "./modules/assets/custody.service.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
 import type { AuditService } from "./modules/audit/audit.service.js";
 import { requireAuth } from "./modules/auth/auth.middleware.js";
@@ -18,6 +19,7 @@ export interface AppDeps extends HealthDeps, AuthRouteOptions {
   auth: AuthService;
   org: OrgService;
   assets: AssetService;
+  custody: CustodyService;
   audit: AuditService;
 }
 
@@ -34,7 +36,8 @@ export function createApp(deps: AppDeps) {
   app.use("/api/health", healthRoutes(deps));
   app.use("/api/auth", authRoutes(deps.auth, deps.org, signedIn, deps));
   app.use("/api/org", orgRoutes(deps.org, signedIn));
-  app.use("/api/assets", assetRoutes(deps.assets, signedIn));
+  app.use("/api/assets", assetRoutes(deps.assets, deps.custody, signedIn));
+  app.use("/api/custody", custodyRoutes(deps.custody, signedIn));
   app.use("/api/audit", auditRoutes(deps.audit, signedIn));
 
   app.use(notFound);

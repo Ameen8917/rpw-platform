@@ -2,6 +2,7 @@ import {
   DataTypes, Model, type CreationOptional, type InferAttributes, type InferCreationAttributes,
   type NonAttribute, type Sequelize,
 } from "sequelize";
+import { StoredFile } from "../files/files.models.js";
 import type { AssetCategory, AssetSource, AssetStatus } from "./asset-rules.js";
 
 /** Invoice details kept with an asset. The file itself is stored separately (M4). */
@@ -41,10 +42,39 @@ export class Asset extends Model<InferAttributes<Asset>, InferCreationAttributes
   declare verified: boolean | null;
   declare invoiceDoc: InvoiceDoc | null;
   declare createdBy: string | null;
+  /* Current custody: the issue that put it with its holder, the event that acknowledged that
+     (a signed issue, or the holder's acceptance), and the last return */
+  declare custodyEventId: CreationOptional<string | null>;
+  declare acceptanceEventId: CreationOptional<string | null>;
+  declare returnEventId: CreationOptional<string | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
   declare accessories?: NonAttribute<AssetAccessory[]>;
+  declare custodyEvent?: NonAttribute<CustodyEvent | null>;
+  declare acceptanceEvent?: NonAttribute<CustodyEvent | null>;
+  declare returnEvent?: NonAttribute<CustodyEvent | null>;
+  declare custodyHistory?: NonAttribute<CustodyEvent[]>;
+}
+
+export const RETURN_CONDITIONS = ["Good", "Minor damage", "Damaged — needs repair", "Not working"] as const;
+export type ReturnCondition = (typeof RETURN_CONDITIONS)[number];
+
+export class CustodyEvent extends Model<InferAttributes<CustodyEvent>, InferCreationAttributes<CustodyEvent>> {
+  declare id: CreationOptional<string>;
+  declare assetId: string;
+  declare kind: "issue" | "accept" | "return";
+  declare at: CreationOptional<Date>;
+  declare holderId: string;
+  declare actorId: string;
+  declare method: "in_app" | "signature" | null;
+  declare snapshot: string[];
+  declare signatureFileId: string | null;
+  declare note: string | null;
+  declare condition: ReturnCondition | null;
+  declare missing: string[];
+
+  declare signatureFile?: NonAttribute<StoredFile | null>;
 }
 
 export class AssetAccessory extends Model<InferAttributes<AssetAccessory>, InferCreationAttributes<AssetAccessory>> {
@@ -98,9 +128,27 @@ export function initAssetModels(sequelize: Sequelize) {
     verified: { type: DataTypes.BOOLEAN },
     invoiceDoc: { type: DataTypes.JSONB },
     createdBy: userRef(),
+    custodyEventId: { type: DataTypes.UUID },
+    acceptanceEventId: { type: DataTypes.UUID },
+    returnEventId: { type: DataTypes.UUID },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   }, { sequelize, tableName: "assets" });
+
+  CustodyEvent.init({
+    id: uuid(),
+    assetId: { type: DataTypes.UUID, allowNull: false },
+    kind: { type: DataTypes.STRING(10), allowNull: false },
+    at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    holderId: { type: DataTypes.STRING(40), allowNull: false },
+    actorId: { type: DataTypes.STRING(40), allowNull: false },
+    method: { type: DataTypes.STRING(10) },
+    snapshot: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false, defaultValue: [] },
+    signatureFileId: { type: DataTypes.UUID },
+    note: { type: DataTypes.TEXT },
+    condition: { type: DataTypes.TEXT },
+    missing: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false, defaultValue: [] },
+  }, { sequelize, tableName: "asset_custody_events", timestamps: false });
 
   AssetAccessory.init({
     id: uuid(),
@@ -123,4 +171,9 @@ export function initAssetModels(sequelize: Sequelize) {
   }, { sequelize, tableName: "asset_code_sequences", createdAt: false });
 
   Asset.hasMany(AssetAccessory, { foreignKey: "assetId", as: "accessories" });
+  Asset.belongsTo(CustodyEvent, { foreignKey: "custodyEventId", as: "custodyEvent", constraints: false });
+  Asset.belongsTo(CustodyEvent, { foreignKey: "acceptanceEventId", as: "acceptanceEvent", constraints: false });
+  Asset.belongsTo(CustodyEvent, { foreignKey: "returnEventId", as: "returnEvent", constraints: false });
+  Asset.hasMany(CustodyEvent, { foreignKey: "assetId", as: "custodyHistory", constraints: false });
+  CustodyEvent.belongsTo(StoredFile, { foreignKey: "signatureFileId", as: "signatureFile", constraints: false });
 }
