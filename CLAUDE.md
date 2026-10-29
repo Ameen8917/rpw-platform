@@ -7,7 +7,13 @@ Ratnapprabbha World (RPW) internal operations platform for a multi-brand automot
 
 Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Behaviour is unchanged: all state still lives in memory in `frontend/src/App.tsx` and resets on reload. Asset Management is the first module moving to the backend; its spec, decisions and milestones are in `docs/asset-management.md`.
 
-`backend/` (Express 5 + TypeScript, strict) is at milestone M1: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations`, JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
+`backend/` (Express 5 + TypeScript, strict) is at milestone M2: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations` (each runs in a transaction), JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
+
+Backend modules live in `src/modules/<name>/` split into `*.models.ts`, `*.repository.ts` (only place that touches models), `*.service.ts`, `*.controller.ts`, `*.routes.ts`, `*.schemas.ts`, `*.dto.ts`. DTOs match `frontend/src/types`.
+- `org`: dealerships, facilities, departments, users (text IDs from the prototype, e.g. `D_JCB_NSK`). Read-only `GET /api/org/*`.
+- `auth`: employee code + password (scrypt), server-side sessions in an httpOnly SameSite=Strict cookie; the DB stores only HMAC(SESSION_SECRET, token). `permissionsFor()` ports the prototype's `P()`; powers the prototype tied to user IDs are `users.grants`. `requireAuth` puts `{ user, permissions }` on `res.locals.auth`. `DEV_LOGIN_ENABLED` mounts `/api/auth/dev/*` ("sign in as"), refused in production.
+
+Tests: `*.test.ts` unit/API tests need no DB. `*.int.test.ts` run against `TEST_DATABASE_URL` in schema `rpw_test`, which `src/test/global-setup.ts` drops and rebuilds from migrations + seed on every run; they are skipped (with a warning) if it is unset.
 
 Layout of `frontend/src`:
 - `types/` — domain model (the contract the backend must match)
@@ -18,7 +24,7 @@ Layout of `frontend/src`:
 
 TypeScript runs with `strict: false` during migration. Tighten it module by module, starting with `domain/` and `features/assets/`.
 
-Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check` (read-only connection test), `npm run db:migrate[:status]`.
+Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check[:test]` (read-only connection test), `npm run db:migrate[:status]`, `npm run db:seed` (prototype org data; sets SEED_USER_PASSWORD only where no password exists).
 
 
 # Project Instructions

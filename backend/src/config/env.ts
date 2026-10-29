@@ -18,6 +18,18 @@ const EnvSchema = z.object({
 
   /* Separate database for integration tests; never the main one */
   TEST_DATABASE_URL: z.string().optional().transform((v) => (v ? v : undefined)),
+
+  /* Keys session lookups (HMAC of the cookie token), so a leaked sessions table cannot be replayed */
+  SESSION_SECRET: z.string({ required_error: "is required" }).min(32, "must be at least 32 characters"),
+  SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24 * 30).default(12),
+  /* Initial password for seeded users who can sign in (db:seed only) */
+  SEED_USER_PASSWORD: z.string().min(8, "must be at least 8 characters").optional().or(z.literal("").transform(() => undefined)),
+  /* "Sign in as" without a password, for development. Refused in production. */
+  DEV_LOGIN_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+}).superRefine((env, ctx) => {
+  if (env.NODE_ENV === "production" && env.DEV_LOGIN_ENABLED) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DEV_LOGIN_ENABLED"], message: "must not be true in production" });
+  }
 });
 
 export type Env = z.infer<typeof EnvSchema>;

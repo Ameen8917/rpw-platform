@@ -3,11 +3,19 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app.js";
+import type { AuthService } from "./modules/auth/auth.service.js";
+import type { OrgService } from "./modules/org/org.service.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { validate } from "./middleware/validate.js";
 
+/* No database: auth never finds a session, org is never reached */
 const appWith = (checkDatabase: () => Promise<unknown>) =>
-  createApp({ corsOrigin: "http://localhost:5173", checkDatabase });
+  createApp({
+    corsOrigin: "http://localhost:5173", checkDatabase,
+    auth: { resolve: async () => null } as unknown as AuthService,
+    org: {} as OrgService,
+    cookie: { secure: false }, devLoginEnabled: false,
+  });
 
 describe("GET /api/health", () => {
   it("is 200 when the database answers", async () => {
@@ -20,6 +28,18 @@ describe("GET /api/health", () => {
     const res = await request(appWith(async () => { throw new Error("password authentication failed"); })).get("/api/health");
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ status: "degraded", database: "unreachable" });
+  });
+});
+
+describe("auth guard without a session", () => {
+  const app = appWith(async () => {});
+  it.each(["/api/auth/me", "/api/org/users", "/api/org/dealerships"])("%s is 401", async (path) => {
+    const res = await request(app).get(path);
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("unauthorized");
+  });
+  it("does not mount development sign-in unless enabled", async () => {
+    expect((await request(app).get("/api/auth/dev/users")).status).toBe(404);
   });
 });
 

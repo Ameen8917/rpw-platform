@@ -9,6 +9,8 @@ export const notFound: RequestHandler = (req, _res, next) => {
    Unexpected errors are logged server-side and returned without internals. */
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof HttpError) {
+    const retry = (err.details as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds;
+    if (retry) res.set("Retry-After", String(retry));
     res.status(err.status).json({ error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) } });
     return;
   }
