@@ -2,6 +2,10 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { errorHandler, notFound } from "./middleware/error-handler.js";
+import { assetRoutes } from "./modules/assets/assets.routes.js";
+import type { AssetService } from "./modules/assets/assets.service.js";
+import { auditRoutes } from "./modules/audit/audit.routes.js";
+import type { AuditService } from "./modules/audit/audit.service.js";
 import { requireAuth } from "./modules/auth/auth.middleware.js";
 import { authRoutes, type AuthRouteOptions } from "./modules/auth/auth.routes.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
@@ -13,6 +17,8 @@ export interface AppDeps extends HealthDeps, AuthRouteOptions {
   corsOrigin: string;
   auth: AuthService;
   org: OrgService;
+  assets: AssetService;
+  audit: AuditService;
 }
 
 /* Builds the Express app from its dependencies, so tests can run it without a real database.
@@ -28,6 +34,8 @@ export function createApp(deps: AppDeps) {
   app.use("/api/health", healthRoutes(deps));
   app.use("/api/auth", authRoutes(deps.auth, deps.org, signedIn, deps));
   app.use("/api/org", orgRoutes(deps.org, signedIn));
+  app.use("/api/assets", assetRoutes(deps.assets, signedIn));
+  app.use("/api/audit", auditRoutes(deps.audit, signedIn));
 
   app.use(notFound);
   app.use(errorHandler);

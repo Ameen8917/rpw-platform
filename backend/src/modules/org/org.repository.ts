@@ -10,6 +10,9 @@ export const orgRepository = {
   listDepartments: () => Department.findAll({ order: [["name", "ASC"]] }),
   listUsers: () => User.findAll({ include: [withDealershipIds], order: [["name", "ASC"]] }),
 
+  findDealershipById: (id: string) => Dealership.findByPk(id),
+  findFacilityById: (id: string) => Facility.findByPk(id),
+  findDepartmentById: (id: string) => Department.findByPk(id),
   findUserById: (id: string) => User.findByPk(id, { include: [withDealershipIds] }),
 
   /* Exact match, case-insensitive (people type "rpw-emp-0001" too). Not ILIKE: a typed % or _

@@ -4,6 +4,7 @@ import "dotenv/config";
 import { describeDatabaseUrl, EnvError, loadEnv } from "../config/env.js";
 import { initModels } from "../db/models.js";
 import { createSequelize } from "../db/sequelize.js";
+import { seedAssets } from "../db/seed/seed-assets.js";
 import { seedOrg } from "../db/seed/seed-org.js";
 
 async function main() {
@@ -18,6 +19,8 @@ async function main() {
     const r = await seedOrg(sequelize, { initialPassword: env.SEED_USER_PASSWORD });
     console.log(`Upserted ${r.dealerships} dealerships, ${r.facilities} facilities, ${r.departments} departments, ${r.users} people.`);
     console.log(`Initial password set for ${r.passwordsSet} user(s)${r.passwordsSet ? "" : " (everyone already had one)"}.`);
+    const a = await seedAssets(sequelize);
+    console.log(`Inserted ${a.assets} asset(s), ${a.accessories} accessory(ies), ${a.auditEntries} audit entry(ies); existing rows left as they were.`);
   } finally {
     await sequelize.close();
   }

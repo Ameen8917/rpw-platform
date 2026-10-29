@@ -1,9 +1,9 @@
 import request from "supertest";
 import type { Sequelize } from "sequelize";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "../../app.js";
-import { openTestDatabase, TEST_PASSWORD, TEST_SESSION_SECRET, testDbEnv } from "../../test/test-db.js";
-import { createOrgService } from "../org/org.service.js";
+import type { createApp } from "../../app.js";
+import { createTestApp, sessionCookie, TEST_AUTH_OPTIONS as authOpts } from "../../test/test-app.js";
+import { openTestDatabase, TEST_PASSWORD, testDbEnv } from "../../test/test-db.js";
 import { createThrottle } from "./login-throttle.js";
 import { createAuthService } from "./auth.service.js";
 import { Session } from "./session.model.js";
@@ -15,27 +15,18 @@ const DIRECTOR = "RPW-EMP-0001";   // Arjun, U_ARJ, D_CORP
 const IT_MANAGER = "RPW-EMP-0187"; // Nilesh Jadhav, U_NIL, JCB Nashik
 const STAFF = "RPW-EMP-0421";      // Ganesh Shinde, no login
 
-const sessionCookie = (res: request.Response) =>
-  ([] as string[]).concat(res.headers["set-cookie"] ?? []).find((c) => c.startsWith("rpw_session="));
-
 describe.skipIf(!env)("auth and org API (test database)", () => {
   let sequelize: Sequelize;
   let app: ReturnType<typeof createApp>;
-  const authOpts = { sessionSecret: TEST_SESSION_SECRET, sessionTtlHours: 12 };
 
   beforeAll(() => {
     sequelize = openTestDatabase(env!);
-    app = createApp({
-      corsOrigin: "http://localhost:5173",
-      checkDatabase: () => sequelize.query("SELECT 1"),
+    app = createTestApp(sequelize, {
       auth: createAuthService({
         ...authOpts,
         accountThrottle: createThrottle({ maxFailures: 3, windowMs: 60_000 }),
         ipThrottle: createThrottle({ maxFailures: 1000, windowMs: 60_000 }),
       }),
-      org: createOrgService(),
-      cookie: { secure: false },
-      devLoginEnabled: true,
     });
   });
   afterAll(() => sequelize?.close());

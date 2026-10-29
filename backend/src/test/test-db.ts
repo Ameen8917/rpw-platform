@@ -3,6 +3,7 @@ import { loadEnv, testDatabaseUrl, type Env } from "../config/env.js";
 import { createMigrator } from "../db/migrator.js";
 import { initModels } from "../db/models.js";
 import { createSequelize } from "../db/sequelize.js";
+import { seedAssets } from "../db/seed/seed-assets.js";
 import { seedOrg } from "../db/seed/seed-org.js";
 
 /* Integration tests run against TEST_DATABASE_URL (a separate Supabase project), in their own
@@ -31,6 +32,7 @@ export async function resetTestDatabase(env: Env) {
     await sequelize.query(`CREATE SCHEMA "${TEST_SCHEMA}"`);
     await createMigrator(sequelize, TEST_SCHEMA).up();
     await seedOrg(sequelize, { initialPassword: TEST_PASSWORD });
+    await seedAssets(sequelize);
   } finally {
     await sequelize.close();
   }

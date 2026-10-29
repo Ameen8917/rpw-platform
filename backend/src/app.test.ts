@@ -3,6 +3,8 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app.js";
+import type { AssetService } from "./modules/assets/assets.service.js";
+import type { AuditService } from "./modules/audit/audit.service.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
 import type { OrgService } from "./modules/org/org.service.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -14,6 +16,8 @@ const appWith = (checkDatabase: () => Promise<unknown>) =>
     corsOrigin: "http://localhost:5173", checkDatabase,
     auth: { resolve: async () => null } as unknown as AuthService,
     org: {} as OrgService,
+    assets: {} as AssetService,
+    audit: {} as AuditService,
     cookie: { secure: false }, devLoginEnabled: false,
   });
 
@@ -33,7 +37,7 @@ describe("GET /api/health", () => {
 
 describe("auth guard without a session", () => {
   const app = appWith(async () => {});
-  it.each(["/api/auth/me", "/api/org/users", "/api/org/dealerships"])("%s is 401", async (path) => {
+  it.each(["/api/auth/me", "/api/org/users", "/api/org/dealerships", "/api/assets", "/api/assets/lookup?code=1", "/api/audit"])("%s is 401", async (path) => {
     const res = await request(app).get(path);
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("unauthorized");
