@@ -5,7 +5,9 @@
 
 Ratnapprabbha World (RPW) internal operations platform for a multi-brand automotive dealership group (Mahindra, Honda, JCB, etc. in Maharashtra).
 
-Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Behaviour is unchanged: all state still lives in memory in `frontend/src/App.tsx` and resets on reload. There is no backend yet. Asset Management is the first module to get a backend.
+Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Behaviour is unchanged: all state still lives in memory in `frontend/src/App.tsx` and resets on reload. Asset Management is the first module moving to the backend; its spec, decisions and milestones are in `docs/asset-management.md`.
+
+`backend/` (Express 5 + TypeScript, strict) is at milestone M1: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations`, JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
 
 Layout of `frontend/src`:
 - `types/` — domain model (the contract the backend must match)
@@ -16,7 +18,7 @@ Layout of `frontend/src`:
 
 TypeScript runs with `strict: false` during migration. Tighten it module by module, starting with `domain/` and `features/assets/`.
 
-Commands (from the repo root): `npm run dev | build | typecheck | lint | test`.
+Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check` (read-only connection test), `npm run db:migrate[:status]`.
 
 
 # Project Instructions

@@ -2,13 +2,19 @@
   "name": "rpw-platform",
   "private": true,
   "workspaces": [
-    "frontend"
+    "frontend",
+    "backend"
   ],
   "scripts": {
     "dev": "npm run dev -w frontend",
-    "build": "npm run build -w frontend",
-    "typecheck": "npm run typecheck -w frontend",
-    "lint": "npm run lint -w frontend",
-    "test": "npm run test -w frontend"
+    "dev:api": "npm run dev -w backend",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "db:check": "npm run db:check -w backend",
+    "db:check:test": "npm run db:check:test -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:migrate:status": "npm run db:migrate:status -w backend"
   }
 }
