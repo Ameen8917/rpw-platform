@@ -55,6 +55,8 @@ export interface User {
   noLogin?: boolean;
   inactive?: boolean;
   approvalLimit?: number | null;
+  /** Powers held personally (e.g. "dispose_assets"); set by the server */
+  grants?: string[];
 }
 
 /* ------------------------------ Assets ------------------------------------ */
@@ -102,6 +104,42 @@ export interface InvoiceDoc {
   total?: number;
 }
 
+/** Written off (from the API) */
+export interface Disposal {
+  reason: string;
+  scrapValue: number | null;
+  /** Net book value on the day it was written off */
+  bookValue: number | null;
+  by: ID;
+  at: ISODate;
+}
+
+/** Schedule II book value, computed by the server as at today (or the disposal date) */
+export interface Depreciation {
+  life: number;
+  rate: number;
+  years: number;
+  residual: number;
+  nbv: number;
+  accumulated: number;
+  fullyDepreciated: boolean;
+}
+
+/** One issue, acceptance or return (from the API; asset detail only) */
+export interface CustodyEvent {
+  id: ID;
+  kind: "issue" | "accept" | "return";
+  at: ISODate;
+  holderId: ID;
+  actorId: ID;
+  method: "in_app" | "signature" | null;
+  snapshot: string[];
+  signature: string | null;
+  note: string | null;
+  condition: string | null;
+  missing: string[];
+}
+
 export interface Asset {
   id: ID;
   code: string;               // RPW/JNS/IT/26-27/0007
@@ -129,6 +167,13 @@ export interface Asset {
   accessories?: Accessory[];
   verified?: boolean;
   invoiceDoc?: InvoiceDoc | null;
+  /* Set by the API */
+  disposal?: Disposal | null;
+  depreciation?: Depreciation | null;
+  /** Detail only: every custody event, newest first */
+  custodyHistory?: CustodyEvent[];
+  /** Detail only: audit entries for the asset and its requisition, newest first */
+  activity?: AuditEntry[];
 }
 
 /* --------------------------- Requisitions --------------------------------- */

@@ -13,8 +13,9 @@ export interface BtnProps {
   disabled?: boolean;
   full?: boolean;
   size?: "sm" | "md";
+  type?: "button" | "submit";
 }
-export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled, full, size = "md" }: BtnProps) {
+export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled, full, size = "md", type = "button" }: BtnProps) {
   const pad = size === "sm" ? "px-3 py-1.5 text-sm" : "px-4 py-2.5 text-sm";
   const styles = {
     primary: { background: T.primary, color: "#fff", border: "1px solid " + T.primary },
@@ -23,7 +24,7 @@ export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled,
     danger: { background: "#fff", color: T.bad, border: "1px solid " + T.badBg },
   }[kind];
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button type={type} onClick={onClick} disabled={disabled}
       className={cx("inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[0.98]", pad, full && "w-full", disabled && "opacity-40 cursor-not-allowed")}
       style={styles}>{Icon && <Icon size={16} />}{children}</button>
   );

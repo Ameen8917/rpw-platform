@@ -27,13 +27,17 @@ export function ProcureModal({ r, ctx, onClose, onSubmit }) {
   const [vendor, setVendor] = useState(""); const [invoice, setInvoice] = useState("");
   const [date, setDate] = useState("2026-09-06");
   const [invoiceDoc, setInvoiceDoc] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState([{ name: "", category: CATEGORIES[0], make: "", model: "", serial: "", cost: "", warranty: "", bundled: "", assignedTo: "", fromInvoice: false }]);
   const set = (i, k, v) => setRows((rs) => rs.map((r2, j) => j === i ? { ...r2, [k]: v } : r2));
   const total = rows.reduce((s, x) => s + (Number(x.cost) || 0), 0);
   const ok = vendor.trim() && rows.every((x) => x.name.trim() && x.cost);
   return (
     <Modal title="Record procurement" onClose={onClose}
-      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok} onClick={() => onSubmit({ vendor, invoice, date, assets: rows, invoiceDoc })}>Procure & add to register</Btn></>}>
+      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok || busy} onClick={async () => {
+        setBusy(true);
+        try { await onSubmit({ vendor, invoice, date, assets: rows, invoiceDoc }); } finally { setBusy(false); }
+      }}>{busy ? "Saving…" : "Procure & add to register"}</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           Estimated {inrFull(r.estCost)} · each line below becomes an asset in the register.

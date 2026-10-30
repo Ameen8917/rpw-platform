@@ -13,12 +13,26 @@ import { ApprovalBox } from "../requisitions/RequisitionBits";
 import { fmtDate, inrFull, inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
+/* Action handlers return a promise of success (the API call); dialogs close only when it succeeded */
 export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory, onIssue, onReturn, onAccept }) {
   const { user, perm, D, F, DEP, U, go } = ctx;
   const [modal, setModal] = useState(null);
+  const [busy, setBusy] = useState(false);
   if (!a) return <Empty msg="Asset not found." />;
   const req = a.reqRef ? reqs.find((r) => r.ref === a.reqRef) : null;
-  const history = auditLog.filter((e) => e.ref === a.code || (req && e.ref === req.ref));
+  /* Saved activity comes with the asset; requisition steps still recorded only in this browser are added */
+  const history = [
+    ...(a.activity || auditLog.filter((e) => e.ref === a.code)),
+    ...auditLog.filter((e) => req && e.ref === req.ref && !(a.activity || []).some((x) => x.id === e.id)),
+  ].sort((x, y) => (x.at < y.at ? 1 : -1));
+  const submit = async (work: () => Promise<boolean> | boolean | void) => {
+    setBusy(true);
+    try {
+      if ((await work()) !== false) setModal(null);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <button onClick={() => go("assets")} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Assets</button>
@@ -36,7 +50,20 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
           </div>
         </div>
         {perm.canDispose && a.status !== "disposed" && (
-          <div className="mt-4"><Btn size="sm" kind="danger" icon={Archive} onClick={() => setModal("dispose")}>Dispose / write off</Btn></div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Btn size="sm" kind="danger" icon={Archive} disabled={!!a.assignedTo} onClick={() => setModal("dispose")}>Dispose / write off</Btn>
+            {a.assignedTo && <span className="text-[12px]" style={{ color: T.sub }}>Issued to someone — record its return first.</span>}
+          </div>
+        )}
+        {a.disposal && (
+          <div className="mt-4 rounded-lg p-3" style={{ background: T.badBg }}>
+            <div className="text-xs font-bold" style={{ color: T.bad }}>Written off on {fmtDate(a.disposal.at)} by {U(a.disposal.by)?.name || "—"}</div>
+            <div className="mt-1 text-[12px]" style={{ color: T.ink }}>{a.disposal.reason}</div>
+            <div className="mt-1 text-[11px]" style={{ color: T.sub }}>
+              {a.disposal.bookValue !== null ? `Book value ${inrFull(Math.round(a.disposal.bookValue))}` : "No book value"}
+              {a.disposal.scrapValue !== null ? ` · scrap value ${inrFull(a.disposal.scrapValue)}` : ""}
+            </div>
+          </div>
         )}
       </Card>
 
@@ -121,17 +148,23 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
                   </div>
                 )}
 
-                {a.returnRecord && (
-                  <div className="mt-2 rounded-lg p-3" style={{ background: T.slateBg }}>
-                    <div className="text-xs font-bold" style={{ color: T.sub }}>Returned on {fmtDate(a.returnRecord.at)} · condition: {a.returnRecord.condition}</div>
-                    {a.returnRecord.missing?.length > 0 && (
-                      <div className="mt-1 text-[12px]" style={{ color: T.bad }}>Not returned: {a.returnRecord.missing.join(", ")}</div>
-                    )}
-                  </div>
-                )}
               </>
             ) : (
               <p className="mt-2 text-[13px]" style={{ color: T.sub }}>Not issued to an individual — held by the facility or department.</p>
+            )}
+
+            {a.returnRecord && (
+              <div className="mt-2 rounded-lg p-3" style={{ background: T.slateBg }}>
+                <div className="text-xs font-bold" style={{ color: T.sub }}>
+                  Last returned on {fmtDate(a.returnRecord.at)}{a.returnRecord.from ? ` by ${U(a.returnRecord.from)?.name}` : ""} · condition: {a.returnRecord.condition}
+                </div>
+                {a.returnRecord.missing?.length > 0 && (
+                  <div className="mt-1 text-[12px]" style={{ color: T.bad }}>Not returned: {a.returnRecord.missing.join(", ")}</div>
+                )}
+                {a.returnRecord.signature && (
+                  <img src={a.returnRecord.signature} alt="Signature of the person returning" style={{ marginTop: 8, height: 54, background: "#fff", border: "1px solid " + T.line, borderRadius: 6 }} />
+                )}
+              </div>
             )}
 
             {perm.canAddExisting && a.status !== "disposed" && (
@@ -152,7 +185,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <SectionTitle icon={Package}>Accessories ({acc.length})</SectionTitle>
-              {perm.canAddExisting && <Btn size="sm" kind="secondary" icon={Plus} onClick={() => setModal("accessory")}>Add accessory</Btn>}
+              {perm.canAddExisting && a.status !== "disposed" && <Btn size="sm" kind="secondary" icon={Plus} onClick={() => setModal("accessory")}>Add accessory</Btn>}
             </div>
             <p className="mt-1 text-[13px]" style={{ color: T.sub }}>
               Tracked against this asset, not capitalised on their own. Bundled items are already inside the asset cost.
@@ -192,7 +225,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
       })()}
 
       {(() => {
-        const dep = depreciation(a);
+        const dep = a.depreciation !== undefined ? a.depreciation : depreciation(a);
         if (!dep) return null;
         const pct = (dep.accumulated / a.cost) * 100;
         return (
@@ -262,15 +295,15 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
       )}
 
       {modal === "label" && <LabelModal ctx={ctx} assets={[a]} onClose={() => setModal(null)} />}
-      {modal === "issue" && <IssueModal a={a} ctx={ctx} onClose={() => setModal(null)}
-        onSubmit={(d) => { onIssue(d); setModal(null); }} />}
-      {modal === "return" && <ReturnModal a={a} ctx={ctx} onClose={() => setModal(null)}
-        onSubmit={(d) => { onReturn(d); setModal(null); }} />}
-      {modal === "accept" && <AcceptModal a={a} onClose={() => setModal(null)}
-        onSubmit={() => { onAccept(); setModal(null); }} />}
-      {modal === "accessory" && <AccessoryModal a={a} onClose={() => setModal(null)}
-        onSubmit={(acc) => { onAddAccessory(acc); setModal(null); }} />}
-      {modal === "dispose" && <DisposeModal a={a} onClose={() => setModal(null)} onSubmit={(r2, s) => { onDispose(r2, s); setModal(null); }} />}
+      {modal === "issue" && <IssueModal a={a} ctx={ctx} busy={busy} onClose={() => setModal(null)}
+        onSubmit={(d) => submit(() => onIssue(d))} />}
+      {modal === "return" && <ReturnModal a={a} ctx={ctx} busy={busy} onClose={() => setModal(null)}
+        onSubmit={(d) => submit(() => onReturn(d))} />}
+      {modal === "accept" && <AcceptModal a={a} busy={busy} onClose={() => setModal(null)}
+        onSubmit={() => submit(() => onAccept())} />}
+      {modal === "accessory" && <AccessoryModal a={a} busy={busy} onClose={() => setModal(null)}
+        onSubmit={(acc) => submit(() => onAddAccessory(acc))} />}
+      {modal === "dispose" && <DisposeModal a={a} busy={busy} onClose={() => setModal(null)} onSubmit={(r2, s) => submit(() => onDispose(r2, s))} />}
     </div>
   );
 }

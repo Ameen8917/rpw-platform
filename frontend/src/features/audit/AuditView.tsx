@@ -1,15 +1,33 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Search,
+  RefreshCw, Search,
 } from "lucide-react";
-import { Avatar, Card, Empty, PageHead } from "../../components/ui";
+import { Avatar, Btn, Card, Empty, PageHead } from "../../components/ui";
+import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { T } from "../../theme";
+import type { AuditEntry } from "../../types";
 
+/* Saved entries come from the server (asset actions). `auditLog` holds the requisition and
+   payment steps recorded in this browser only, until those modules have a backend. */
 export function AuditView({ ctx, auditLog }) {
   const { U } = ctx;
   const [q, setQ] = useState("");
-  const rows = auditLog.filter((e) => !q || (e.action + e.ref + e.detail + (U(e.actorId)?.name || "")).toLowerCase().includes(q.toLowerCase()));
+  const [saved, setSaved] = useState<AuditEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setSaved(await api.get<AuditEntry[]>("/audit?limit=1000"));
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const all = [...(saved || []), ...auditLog].sort((x, y) => (x.at < y.at ? 1 : -1));
+  const rows = all.filter((e) => !q || (e.action + e.ref + e.detail + (U(e.actorId)?.name || "")).toLowerCase().includes(q.toLowerCase()));
   return (
     <div className="space-y-4">
       <PageHead title="Audit trail" sub="Every money & asset-value action, platform-wide" />
@@ -21,7 +39,16 @@ export function AuditView({ ctx, auditLog }) {
           </div>
         </div>
       </Card>
+      {error && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm" style={{ color: T.bad }}>Saved entries could not be loaded: {error}</span>
+            <Btn size="sm" kind="secondary" icon={RefreshCw} onClick={load}>Try again</Btn>
+          </div>
+        </Card>
+      )}
       <Card>
+        {!saved && !error && <Empty msg="Loading saved entries…" />}
         <div className="divide-y" style={{ borderColor: T.line }}>
           {rows.map((e) => (
             <div key={e.id} className="flex items-start gap-3 py-3">

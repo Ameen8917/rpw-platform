@@ -5,7 +5,7 @@
 
 Ratnapprabbha World (RPW) internal operations platform for a multi-brand automotive dealership group (Mahindra, Honda, JCB, etc. in Maharashtra).
 
-Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Behaviour is unchanged: all state still lives in memory in `frontend/src/App.tsx` and resets on reload. Asset Management is the first module moving to the backend; its spec, decisions and milestones are in `docs/asset-management.md`.
+Current state: the original single-file prototype (`rpw-platform.tsx`, kept at the repo root as a reference, not built) has been split into a Vite + React + TypeScript app in `frontend/`. Since M6 the app signs in against the API, loads organisation data from it, and Asset Management (register, detail, custody, accessories, disposal, add existing, procured assets) reads and writes through it. Requisitions, payments, escalations and the Admin console still live in memory in `frontend/src/App.tsx` (kept across "sign in as", reset on reload). Asset Management is the first module moving to the backend; its spec, decisions and milestones are in `docs/asset-management.md`.
 
 `backend/` (Express 5 + TypeScript, strict) is at milestone M5: config validation (`src/config/env.ts`), Sequelize connection to Supabase Postgres, Umzug migrations in `src/db/migrations` (each runs in a transaction), JSON error shape, Zod `validate` middleware, `/api/health`. `createApp(deps)` in `src/app.ts` takes its dependencies so API tests run without a database. Our tables live in the `rpw` schema, never `public` (see `docs/supabase-setup.md`). Migrations only go forward; there is no down script.
 
@@ -26,7 +26,10 @@ Tests: `*.test.ts` unit/API tests need no DB. `*.int.test.ts` run against `TEST_
 Layout of `frontend/src`:
 - `types/` — domain model (the contract the backend must match)
 - `domain/` — pure business rules (asset codes, depreciation, custody, approval/payment state machines, permissions). Unit-tested and the first candidates to share with the backend.
-- `data/seed.ts` — prototype seed data
+- `lib/api.ts` — fetch client (`/api`, proxied by Vite to :4000), `ApiError`, `errorMessage()`; a 401 outside `/auth` returns to sign-in
+- `features/shell/session.ts` — sign-in state (`useSession`), development "sign in as"
+- `features/assets/api.ts` — asset and org calls, form → request body mapping
+- `data/seed.ts` — prototype seed data (requisitions still use it; assets and org come from the API)
 - `components/` — shared UI kit and widgets (Barcode, EmployeePicker, SignaturePad)
 - `features/<module>/` — screens per module (assets, requisitions, payments, procurement, escalations, audit, admin, shell)
 

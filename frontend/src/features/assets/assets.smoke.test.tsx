@@ -52,3 +52,29 @@ describe("asset screens render with seed data", () => {
     expect(html).toContain("RPW/MCH/IT/");
   });
 });
+
+describe("asset detail with server data", () => {
+  const base = SEED_ASSETS.find((a) => a.code === "RPW-IT-0142")!;
+
+  it("shows a write-off, the server's book value and saved activity", () => {
+    const a = {
+      ...base, status: "disposed" as const, assignedTo: null, acceptance: null,
+      disposal: { reason: "Beyond repair", scrapValue: 1500, bookValue: 4321.4, by: "U_SUJAY", at: "2026-10-30T06:00:00.000Z" },
+      depreciation: { life: 3, rate: 63.2, years: 2, residual: 3100, nbv: 4321.4, accumulated: 57678.6, fullyDepreciated: false },
+      activity: [{ id: "e1", at: "2026-10-30T06:00:00.000Z", actorId: "U_SUJAY", action: "Disposed asset", ref: base.code, detail: "Beyond repair · scrap ₹1,500" }],
+    };
+    const html = renderToString(<AssetDetail ctx={ctxFor("U_SUJAY")} a={a} reqs={SEED_REQS} auditLog={[]}
+      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} />);
+    expect(html).toContain("Written off on");
+    expect(html).toContain("Book value ₹4,321");
+    expect(html).toContain("Disposed asset");
+    expect(html).not.toContain("Add accessory");
+  });
+
+  it("asks for the return before an issued asset can be written off", () => {
+    const issued = SEED_ASSETS.find((a) => a.assignedTo)!;
+    const html = renderToString(<AssetDetail ctx={ctxFor("U_ARJ")} a={issued} reqs={SEED_REQS} auditLog={[]}
+      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} />);
+    expect(html).toContain("record its return first");
+  });
+});

@@ -346,7 +346,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "directorPurchase", "approved", note); setModal(null); }} />}
       {modal === "dp_reject" && <DecisionModal title="Reject purchase — Director" decision="rejected"
         onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "directorPurchase", "rejected", note); setModal(null); }} />}
-      {modal === "procure" && <ProcureModal r={r} ctx={ctx} onClose={() => setModal(null)} onSubmit={(form) => { onProcure(r, form); setModal(null); }} />}
+      {modal === "procure" && <ProcureModal r={r} ctx={ctx} onClose={() => setModal(null)} onSubmit={async (form) => { if (await onProcure(r, form)) setModal(null); }} />}
       {modal === "pay_advance" && <PayModal kind="advance" r={r} suggested={r.advance.amount} onClose={() => setModal(null)} onSubmit={(form) => { onPay(r, "advance", form); setModal(null); }} />}
       {modal === "pay_balance" && <PayModal kind="balance" r={r} suggested={balanceDue} onClose={() => setModal(null)} onSubmit={(form) => { onPay(r, "balance", form); setModal(null); }} />}
       {modal === "fin_approve" && <DecisionModal title="Payment sign-off" decision="approved"

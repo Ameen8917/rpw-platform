@@ -1,11 +1,13 @@
 import { useState } from "react";
 import {
-  ChevronRight,
+  ChevronRight, LogOut,
 } from "lucide-react";
 import { Avatar } from "../../components/ui";
 import { T } from "../../theme";
 
-export function RoleSwitcher({ users, user, onChange }) {
+/* The signed-in user's menu. `users` are the people offered by the development "sign in as"
+   (empty unless the backend enables it); signing out is always available. */
+export function RoleSwitcher({ users, user, onChange, onSignOut }) {
   const [open, setOpen] = useState(false);
   const groups = [["Director", "director"], ["Corporate functions", "functional_head"], ["Business Heads", "business_head"], ["Dealership managers", "manager"], ["Accounts executives", "accounts_executive"]];
   return (
@@ -22,7 +24,11 @@ export function RoleSwitcher({ users, user, onChange }) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-72 overflow-y-auto rounded-xl py-2 shadow-lg" style={{ background: "#fff", border: "1px solid " + T.line, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
-            {groups.map(([label, role]) => (
+            <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50" style={{ color: T.bad }}>
+              <LogOut size={16} />Sign out
+            </button>
+            {users.length > 0 && <div className="mx-3 mt-1 border-t pt-1 text-[10px] font-bold uppercase tracking-wide" style={{ borderColor: T.line, color: T.warn }}>Development — sign in as</div>}
+            {users.length > 0 && groups.map(([label, role]) => (
               <div key={role}>
                 <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide" style={{ color: T.sub }}>{label}</div>
                 {users.filter((u) => u.role === role && !u.noLogin && !u.inactive).map((u) => (

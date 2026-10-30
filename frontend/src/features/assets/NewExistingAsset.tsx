@@ -16,7 +16,9 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
   const fac = facilities.filter((x) => x.dealershipId === f.dealershipId && x.active);
   const [filled, setFilled] = useState({});   /* which fields came from the invoice */
   const [invoiceDoc, setInvoiceDoc] = useState(null);
-  const code = genAssetCode(ctx.assets || [], dealerships, f.dealershipId, f.category, f.purchaseDate || TODAY.toISOString());
+  const [busy, setBusy] = useState(false);
+  /* The server numbers the code when it saves; the form shows the prefix it will use */
+  const code = genAssetCode([], dealerships, f.dealershipId, f.category, f.purchaseDate || TODAY.toISOString()).replace(/d{4}$/, "····");
   const life = CATEGORY_META[f.category]?.life;
   const ok = f.name.trim() && f.cost;
 
@@ -56,7 +58,7 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
           Tagged “opening stock”, so it stays out of procurement spend reports. Code is generated automatically — {life ? `${f.category} depreciates over ${life} years under Schedule II.` : ""}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Asset code (auto-generated)">
+          <Field label="Asset code (numbered on save)">
             <div className={inputCls} style={{ ...inputStyle, background: T.canvas, color: T.sub }}><span className="font-mono">{code}</span></div>
           </Field>
           <Field label="Category"><select className={inputCls} style={inputStyle} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value as AssetCategory })}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
@@ -112,11 +114,14 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
         </div>
         <div className="mt-4 flex gap-2">
           <Btn kind="ghost" onClick={onCancel}>Cancel</Btn>
-          <Btn icon={Plus} disabled={!ok} onClick={() => onCreate({
-            ...f, code, cost: Number(f.cost),
-            assignedTo: f.assignedTo || null, invoiceDoc,
-            accessories: parseBundled(f.bundled, f.purchaseDate || "2026-09-06"),
-          })}>Add to register</Btn>
+          <Btn icon={Plus} disabled={!ok || busy} onClick={async () => {
+            setBusy(true);
+            try {
+              await onCreate({ ...f, assignedTo: f.assignedTo || null, invoiceDoc });
+            } finally {
+              setBusy(false);
+            }
+          }}>{busy ? "Saving…" : "Add to register"}</Btn>
         </div>
       </Card>
     </div>

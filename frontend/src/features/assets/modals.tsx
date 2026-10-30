@@ -10,7 +10,7 @@ import { inrFull, inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
 /* Issue an asset to a person, capturing acknowledgement at handover */
-export function IssueModal({ a, ctx, onClose, onSubmit }) {
+export function IssueModal({ a, ctx, onClose, onSubmit, busy = false }) {
   const { users } = ctx;
   const staff = users.filter((u) => u.dealershipIds.includes(a.dealershipId));
   const [who, setWho] = useState(staff[0]?.id || "");
@@ -27,7 +27,7 @@ export function IssueModal({ a, ctx, onClose, onSubmit }) {
   return (
     <Modal title="Issue asset" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn full disabled={!ok} onClick={() => onSubmit({ who, method, signature: sig, note, snapshot: items })}>
+        <Btn full disabled={!ok || busy} onClick={() => onSubmit({ who, method, signature: sig, note, snapshot: items })}>
           {method === "in_app" ? "Send for acceptance" : "Record handover"}
         </Btn></>}>
       <div className="space-y-3">
@@ -73,7 +73,7 @@ export function IssueModal({ a, ctx, onClose, onSubmit }) {
 }
 
 /* Recording a return closes the custody loop */
-export function ReturnModal({ a, ctx, onClose, onSubmit }) {
+export function ReturnModal({ a, ctx, onClose, onSubmit, busy = false }) {
   const { U } = ctx;
   const [sig, setSig] = useState(null);
   const [condition, setCondition] = useState("Good");
@@ -83,7 +83,7 @@ export function ReturnModal({ a, ctx, onClose, onSubmit }) {
   return (
     <Modal title="Record return" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn full disabled={!sig} onClick={() => onSubmit({ signature: sig, condition, missing: missingList })}>Confirm return</Btn></>}>
+        <Btn full disabled={!sig || busy} onClick={() => onSubmit({ signature: sig, condition, missing: missingList })}>Confirm return</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           Returned by {U(a.assignedTo)?.name} · {U(a.assignedTo)?.empCode}. Tick anything not returned.
@@ -112,13 +112,13 @@ export function ReturnModal({ a, ctx, onClose, onSubmit }) {
   );
 }
 
-export function AcceptModal({ a, onClose, onSubmit }) {
+export function AcceptModal({ a, onClose, onSubmit, busy = false }) {
   const items = [a.name, ...(a.accessories || []).map((x) => x.name)];
   const [confirmed, setConfirmed] = useState(false);
   return (
     <Modal title="Accept this asset" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn full disabled={!confirmed} onClick={onSubmit}>Confirm receipt</Btn></>}>
+        <Btn full disabled={!confirmed || busy} onClick={onSubmit}>Confirm receipt</Btn></>}>
       <div className="space-y-3">
         <p className="text-[13px]" style={{ color: T.sub }}>
           Confirming records that you received these items and hold them in your custody.
@@ -135,7 +135,7 @@ export function AcceptModal({ a, onClose, onSubmit }) {
   );
 }
 
-export function AccessoryModal({ a, onClose, onSubmit }) {
+export function AccessoryModal({ a, onClose, onSubmit, busy = false }) {
   const [f, setF] = useState({ name: "", serial: "", origin: "bundled", cost: "", addedAt: "2026-09-06" });
   const cost = Number(f.cost) || 0;
   const aboveFloor = f.origin === "separate" && cost >= LIMITS.capitalisation;
@@ -143,7 +143,7 @@ export function AccessoryModal({ a, onClose, onSubmit }) {
   return (
     <Modal title="Add accessory" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn full disabled={!ok || aboveFloor} onClick={() => onSubmit({ ...f, cost })}>Add accessory</Btn></>}>
+        <Btn full disabled={!ok || aboveFloor || busy} onClick={() => onSubmit({ ...f, cost })}>Add accessory</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           Attaching to <b>{a.name}</b> ({a.code}). Accessories are tracked for custody, not depreciated separately.
@@ -180,11 +180,11 @@ export function AccessoryModal({ a, onClose, onSubmit }) {
   );
 }
 
-export function DisposeModal({ a, onClose, onSubmit }) {
+export function DisposeModal({ a, onClose, onSubmit, busy = false }) {
   const [reason, setReason] = useState(""); const [scrap, setScrap] = useState("");
   return (
     <Modal title="Dispose / write off" onClose={onClose}
-      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn kind="danger" full disabled={!reason.trim()} onClick={() => onSubmit(reason, scrap)}>Confirm write-off</Btn></>}>
+      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn kind="danger" full disabled={!reason.trim() || busy} onClick={() => onSubmit(reason, scrap)}>Confirm write-off</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[13px]" style={{ background: T.badBg, color: T.bad }}>
           Removes <b>{a.name}</b> ({inrShort(a.cost)}) from live assets. Permanently recorded in the audit trail.

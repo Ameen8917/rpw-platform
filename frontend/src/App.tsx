@@ -1,16 +1,17 @@
-import { useState, useMemo } from "react";
-import type { ApprovalSlot, Asset } from "./types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ApprovalSlot, Asset, AuditEntry, Department, Dealership, Facility, Requisition, User } from "./types";
 import {
-  LayoutDashboard, Boxes, ShieldCheck, Search, FileText, AlertTriangle, CheckCircle2, Menu, Settings, TrendingUp, Users, Landmark,
+  LayoutDashboard, Boxes, ShieldCheck, Search, FileText, AlertTriangle, CheckCircle2, Menu, Settings, TrendingUp, Users, Landmark, RefreshCw,
 } from "lucide-react";
-import { SEED_ASSETS, SEED_AUDIT, SEED_DEALERSHIPS, SEED_DEPARTMENTS, SEED_FACILITIES, SEED_REQS, SEED_USERS } from "./data/seed";
-import { genAssetCode, mkAsset, parseBundled } from "./domain/assets";
+import { Btn } from "./components/ui";
+import { SEED_REQS } from "./data/seed";
 import { aud } from "./domain/audit";
 import { paidSoFar } from "./domain/payments";
-import { P } from "./domain/permissions";
+import type { Permissions } from "./domain/permissions";
 import { escalation, reqStatus, stageApprover, variance } from "./domain/requisitions";
 import { AdminConsole } from "./features/admin/AdminConsole";
-import { AssetDetail } from "./features/assets/AssetDetail";
+import { assetApi, orgApi, toCreateBody, toProcuredBody } from "./features/assets/api";
+import { AssetDetailPage } from "./features/assets/AssetDetailPage";
 import { AssetList } from "./features/assets/AssetList";
 import { CustodyView } from "./features/assets/CustodyView";
 import { NewExistingAsset } from "./features/assets/NewExistingAsset";
@@ -26,36 +27,135 @@ import { Requisitions } from "./features/requisitions/RequisitionList";
 import { Login } from "./features/shell/Login";
 import { NotificationBell } from "./features/shell/NotificationBell";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
+import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
 import { NavList, ScopeNote } from "./features/shell/Sidebar";
+import { errorMessage } from "./lib/api";
 import { inrFull } from "./lib/format";
 import { T } from "./theme";
 
-export default function App() {
-  const [users, setUsers] = useState(SEED_USERS);
-  const [dealerships, setDealerships] = useState(SEED_DEALERSHIPS);
-  const [facilities, setFacilities] = useState(SEED_FACILITIES);
-  const [departments, setDepartments] = useState(SEED_DEPARTMENTS);
-  const [assets, setAssets] = useState(SEED_ASSETS);
-  const [reqs, setReqs] = useState(SEED_REQS);
-  const [auditLog, setAuditLog] = useState(SEED_AUDIT);
+type Toast = { msg: string; kind: "ok" | "error" } | null;
 
-  const [user, setUser] = useState(SEED_USERS[0]);
+/* Sign-in gate. Organisation data and assets come from the API; requisitions, payments and their
+   audit steps are still held here in memory, and are kept across "sign in as" so one person's
+   requisition can be approved by the next. */
+export default function App() {
+  const { state, signedIn, logout } = useSession();
+  const [reqs, setReqs] = useState<Requisition[]>(SEED_REQS);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [dealerships, setDealerships] = useState<Dealership[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [orgLoaded, setOrgLoaded] = useState(false);
+  const [assets, setAssets] = useState<Asset[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [devUsers, setDevUsers] = useState<DevUser[]>([]);
+
+  const session = state.status === "signedIn" ? state.session : null;
+  const userId = session?.user.id ?? null;
+
+  /* Org data once (Admin edits it in memory), the asset register for every person who signs in */
+  const load = useCallback(async () => {
+    setLoadError(null);
+    setAssets(null);
+    try {
+      const [org, register, dev] = await Promise.all([
+        orgLoaded ? null : orgApi.load(), assetApi.list(), sessionApi.devUsers(),
+      ]);
+      if (org) {
+        setUsers(org.users); setDealerships(org.dealerships); setFacilities(org.facilities); setDepartments(org.departments);
+        setOrgLoaded(true);
+      }
+      setDevUsers(dev);
+      setAssets(register);
+    } catch (err) {
+      setLoadError(errorMessage(err));
+    }
+  }, [orgLoaded]);
+
+  useEffect(() => {
+    if (userId) load();
+    else setAssets(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload per person, not when org data arrives
+  }, [userId]);
+
+  if (state.status === "loading") return <Splash msg="Loading…" />;
+  if (state.status === "signedOut") return <Login onSignedIn={signedIn} expired={state.expired} />;
+  if (loadError) return <Splash msg={`Could not load your data: ${loadError}`} onRetry={load} onSignOut={logout} />;
+  if (!orgLoaded || !assets) return <Splash msg="Loading your workspace…" />;
+
+  return (
+    <Workspace key={session.user.id} session={session} devUsers={devUsers}
+      onSwitchUser={signedIn} onSignOut={logout}
+      org={{ users, dealerships, facilities, departments, setUsers, setDealerships, setFacilities, setDepartments }}
+      assets={assets} setAssets={setAssets} reqs={reqs} setReqs={setReqs} auditLog={auditLog} setAuditLog={setAuditLog} />
+  );
+}
+
+function Splash({ msg, onRetry, onSignOut }: { msg: string; onRetry?: () => void; onSignOut?: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-5 text-center" style={{ background: T.canvas, color: T.ink, fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-black text-white" style={{ background: T.primary }}>R</div>
+      <p className="max-w-sm text-sm" style={{ color: onRetry ? T.bad : T.sub }}>{msg}</p>
+      {onRetry && (
+        <div className="flex gap-2">
+          <Btn size="sm" icon={RefreshCw} onClick={onRetry}>Try again</Btn>
+          {onSignOut && <Btn size="sm" kind="ghost" onClick={onSignOut}>Sign out</Btn>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface WorkspaceProps {
+  session: SessionInfo;
+  devUsers: DevUser[];
+  onSwitchUser: (s: SessionInfo) => void;
+  onSignOut: () => void;
+  org: {
+    users: User[]; dealerships: Dealership[]; facilities: Facility[]; departments: Department[];
+    setUsers; setDealerships; setFacilities; setDepartments;
+  };
+  assets: Asset[];
+  setAssets: (fn: (as: Asset[]) => Asset[]) => void;
+  reqs: Requisition[];
+  setReqs;
+  auditLog: AuditEntry[];
+  setAuditLog;
+}
+
+function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, setAssets, reqs, setReqs, auditLog, setAuditLog }: WorkspaceProps) {
+  const { users, dealerships, facilities, departments, setUsers, setDealerships, setFacilities, setDepartments } = org;
+  const user = session.user;
+  const perm: Permissions = session.permissions;
   const [view, setView] = useState("dashboard");
   const [sel, setSel] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState<Toast>(null);
   const [navOpen, setNavOpen] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
 
-  const perm = P(user);
   const U = (id) => users.find((u) => u.id === id);
   const D = (id) => dealerships.find((d) => d.id === id);
   const F = (id) => facilities.find((f) => f.id === id);
   const DEP = (id) => departments.find((d) => d.id === id);
 
-  function notify(m) { setToast(m); setTimeout(() => setToast(null), 2600); }
+  function notify(msg: string, kind: "ok" | "error" = "ok") {
+    setToast({ msg, kind });
+    setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), kind === "error" ? 6000 : 2600);
+  }
   function go(v, id = null) { setView(v); setSel(id); setNavOpen(false); }
   function pushAudit(action, ref, detail) {
     setAuditLog((l) => [aud(new Date().toISOString(), user.id, action, ref, detail), ...l]);
+  }
+  /* The server's answer replaces the asset in the register (or adds it) */
+  function upsertAsset(a: Asset) {
+    setAssets((as) => (as.some((x) => x.id === a.id) ? as.map((x) => (x.id === a.id ? a : x)) : [a, ...as]));
+  }
+  async function onSwitchTo(u: User) {
+    try {
+      onSwitchUser(await sessionApi.loginAs(u.id));
+    } catch (err) {
+      notify(errorMessage(err), "error");
+    }
   }
 
   /* -------- scoping -------- */
@@ -69,18 +169,13 @@ export default function App() {
     /* Dealership accounts manager: everything approved at their dealership, plus their own */
     if (perm.isAccounts || perm.isExecutive) return reqs.filter((r) => myDealerships.includes(r.dealershipId) && (reqStatus(r) !== "pending" || r.raisedBy === user.id));
     return reqs.filter((r) => r.raisedBy === user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reqs, user]);
 
-  const visibleAssets = useMemo(() => {
-    if (perm.isDirector) return assets;
-    if (perm.isFnHead) return assets;
-    if (perm.isBH) return assets.filter((a) => myDealerships.includes(a.dealershipId));
-    return assets.filter((a) => a.dealershipId === myDealerships[0]);
-  }, [assets, user]);
+  /* The server already limits the register to what this person may see */
+  const visibleAssets = assets;
 
   const ctx = { user, perm, users, dealerships, facilities, departments, assets, U, D, F, DEP, go };
-
-  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
 
   const NAV = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -124,6 +219,8 @@ export default function App() {
     notify(decision === "approved" ? "Advance approved — sent to accounts for payment" : "Advance held");
   }
 
+  /* Not reachable yet (ReqDetail does not wire onVerify), and not saved: verification and
+     "send back" move to the server with the Requisitions backend */
   function verifyEntry(r, decision, note) {
     const now = new Date().toISOString();
     if (decision === "verified") {
@@ -182,37 +279,26 @@ export default function App() {
     notify(kind === "advance" ? "Advance released" : "Balance payment released");
   }
 
-  function procure(r, form) {
-    const codes = [];
-    let pool: Pick<Asset, "code">[] = assets;
-    const created = form.assets.map((a) => {
-      const code = genAssetCode(pool, dealerships, r.dealershipId, a.category, form.date);
-      pool = [...pool, { code }];
-      codes.push(code);
-      return mkAsset({
-        code, name: a.name, category: a.category, make: a.make, model: a.model, serial: a.serial,
-        purchaseDate: form.date, cost: Number(a.cost), vendor: form.vendor,
-        dealershipId: r.dealershipId, facilityId: r.facilityId, deptId: r.deptId,
-        warranty: a.warranty || null, source: "procured", reqRef: r.ref,
-        assignedTo: a.assignedTo || null,
-        accessories: parseBundled(a.bundled, form.date),
-        verified: user.role === "functional_head",
-      });
-    });
-    const total = created.reduce((s, x) => s + x.cost, 0);
-    setAssets((as) => [...created, ...as]);
-    const selfVerified = user.role === "functional_head";
-    setReqs((all) => all.map((x) => x.id === r.id ? { ...x, procurement: {
-      by: user.id, at: new Date().toISOString(), actualCost: total,
-      vendor: form.vendor, invoice: form.invoice, assetCodes: codes,
-      invoiceDoc: form.invoiceDoc || null,
-      verification: selfVerified
-        ? { decision: "verified", by: user.id, at: new Date().toISOString(), note: "Entered and verified by the functional head." }
-        : null,
-    } } : x));
-    pushAudit(selfVerified ? "Procured requisition" : "Entered procured assets — awaiting verification", r.ref,
-      `${created.length} asset(s) · ${inrFull(total)} · ${form.vendor}`);
-    notify(selfVerified ? "Procurement recorded" : "Entered — sent for verification");
+  /* Saved through the API (one asset per line, codes from the server); the requisition itself
+     is still in memory. Resolves true when saved, so the dialog can close. */
+  async function procure(r, form) {
+    try {
+      const res = await assetApi.procure(toProcuredBody(r, form));
+      setAssets((as) => [...res.assets, ...as]);
+      setReqs((all) => all.map((x) => x.id === r.id ? { ...x, procurement: {
+        by: res.by, at: res.at, actualCost: res.actualCost,
+        vendor: res.vendor, invoice: res.invoice, assetCodes: res.assetCodes,
+        invoiceDoc: form.invoiceDoc || null,
+        verification: res.verified
+          ? { decision: "verified", by: res.by, at: res.at, note: "Entered and verified by the functional head." }
+          : null,
+      } } : x));
+      notify(res.verified ? "Procurement recorded" : "Entered — sent for verification");
+      return true;
+    } catch (err) {
+      notify(errorMessage(err), "error");
+      return false;
+    }
   }
 
   return (
@@ -230,7 +316,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell ctx={ctx} reqs={visibleReqs} go={go} />
-          <RoleSwitcher users={users} user={user} onChange={(u) => { setUser(u); go("dashboard"); }} />
+          <RoleSwitcher users={devUsers} user={user} onChange={onSwitchTo} onSignOut={onSignOut} />
         </div>
       </header>
 
@@ -262,56 +348,15 @@ export default function App() {
             notify("Requisition raised"); go("reqdetail", nr.id);
           }} />}
           {view === "assets" && <AssetList ctx={ctx} assets={visibleAssets} />}
-          {view === "assetdetail" && <AssetDetail ctx={ctx} a={assets.find((x) => x.id === sel)} reqs={reqs} auditLog={auditLog}
-            onIssue={(d) => {
-              const a = assets.find((x) => x.id === sel);
-              const now = new Date().toISOString();
-              setAssets((as) => as.map((x) => x.id === sel ? {
-                ...x, assignedTo: d.who, issuedBy: user.id, issuedAt: now, returnRecord: null,
-                acceptance: d.method === "signature"
-                  ? { method: "signature", at: now, signature: d.signature, snapshot: d.snapshot, note: d.note }
-                  : null,
-              } : x));
-              pushAudit(d.method === "signature" ? "Issued asset — signed at handover" : "Issued asset — acceptance pending",
-                a.code, `${U(d.who)?.name} (${U(d.who)?.empCode}) · ${d.snapshot.length} item(s)`);
-              notify(d.method === "signature" ? "Handover recorded" : "Sent for acceptance");
-            }}
-            onAccept={() => {
-              const a = assets.find((x) => x.id === sel);
-              const now = new Date().toISOString();
-              const snapshot = [a.name, ...(a.accessories || []).map((x) => x.name)];
-              setAssets((as) => as.map((x) => x.id === sel ? { ...x, acceptance: { method: "in_app", at: now, snapshot } } : x));
-              pushAudit("Asset receipt accepted", a.code, `${user.name} confirmed ${snapshot.length} item(s) in app`);
-              notify("Receipt confirmed");
-            }}
-            onReturn={(d) => {
-              const a = assets.find((x) => x.id === sel);
-              const now = new Date().toISOString();
-              setAssets((as) => as.map((x) => x.id === sel ? {
-                ...x, assignedTo: null, acceptance: null,
-                returnRecord: { at: now, receivedBy: user.id, signature: d.signature, condition: d.condition, missing: d.missing, from: x.assignedTo },
-              } : x));
-              pushAudit("Asset returned", a.code,
-                `From ${U(a.assignedTo)?.name} · ${d.condition}${d.missing.length ? ` · not returned: ${d.missing.join(", ")}` : ""}`);
-              notify(d.missing.length ? "Return recorded with missing items" : "Return recorded");
-            }}
-            onAddAccessory={(acc) => {
-              const a = assets.find((x) => x.id === sel);
-              setAssets((as) => as.map((x) => x.id === sel ? { ...x, accessories: [...(x.accessories || []), { ...acc, status: "with_asset" }] } : x));
-              pushAudit("Added accessory", a.code, `${acc.name} · ${acc.origin === "bundled" ? "bundled with asset" : `${inrFull(acc.cost)} expensed`}`);
-              notify("Accessory added");
-            }}
-            onDispose={(reason, scrap) => {
-              const a = assets.find((x) => x.id === sel);
-              setAssets((as) => as.map((x) => x.id === sel ? { ...x, status: "disposed", assignedTo: null } : x));
-              pushAudit("Disposed asset", a.code, `${reason}${scrap ? " · scrap " + inrFull(scrap) : ""}`);
-              notify("Asset written off");
-            }} />}
-          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={(draft) => {
-            const created = mkAsset({ ...draft, source: "existing" });
-            setAssets((as) => [created, ...as]);
-            pushAudit("Added existing asset", created.code, `Opening stock · ${inrFull(created.cost)} · ${D(created.dealershipId).name}`);
-            notify("Existing asset added"); go("assetdetail", created.id);
+          {view === "assetdetail" && <AssetDetailPage key={sel} ctx={ctx} assetId={sel} reqs={reqs} auditLog={auditLog} notify={notify} onChanged={upsertAsset} />}
+          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={async (draft) => {
+            try {
+              const created = await assetApi.create(toCreateBody(draft));
+              upsertAsset(created);
+              notify("Existing asset added"); go("assetdetail", created.id);
+            } catch (err) {
+              notify(errorMessage(err), "error");
+            }
           }} />}
           {view === "procurement" && <Procurement ctx={ctx} reqs={visibleReqs} assets={assets} />}
           {view === "escalations" && <Escalations ctx={ctx} reqs={perm.isDirector ? reqs : reqs} />}
@@ -335,8 +380,9 @@ export default function App() {
       </nav>
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-lg md:bottom-6" style={{ background: T.ink }}>
-          <CheckCircle2 size={16} style={{ color: "#7EE0A8" }} />{toast}
+        <div role={toast.kind === "error" ? "alert" : "status"} className="fixed bottom-20 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-lg md:bottom-6"
+          style={{ background: toast.kind === "error" ? T.bad : T.ink }}>
+          {toast.kind === "error" ? <AlertTriangle size={16} className="shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" style={{ color: "#7EE0A8" }} />}{toast.msg}
         </div>
       )}
     </div>
