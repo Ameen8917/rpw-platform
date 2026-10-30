@@ -6,6 +6,7 @@ import { EmployeePicker } from "../../components/EmployeePicker";
 import { Btn, Field, Modal, inputCls, inputStyle } from "../../components/ui";
 import { CATEGORIES } from "../../domain/assets";
 import { InvoiceUpload } from "../invoices/InvoiceScanner";
+import { expandQuantities } from "../invoices/invoiceReader";
 import { inrFull } from "../../lib/format";
 import { T } from "../../theme";
 
@@ -54,9 +55,9 @@ export function ProcureModal({ r, ctx, onClose, onSubmit }) {
           if (d.vendor && !vendor) setVendor(d.vendor);
           if (d.invoiceNo && !invoice) setInvoice(d.invoiceNo);
           if (d.invoiceDate) setDate(d.invoiceDate);
-          /* Each product line on the invoice becomes an asset entry, ready to check and adjust */
+          /* Each unit on the invoice becomes an asset entry, ready to check and adjust */
           if (Array.isArray(d.items) && d.items.length) {
-            setRows(d.items.map((it) => {
+            setRows(expandQuantities(d.items).map((it) => {
               let warranty = "";
               if (it.warrantyMonths && d.invoiceDate) {
                 const w = new Date(d.invoiceDate);

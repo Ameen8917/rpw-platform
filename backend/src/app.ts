@@ -11,6 +11,8 @@ import { requireAuth } from "./modules/auth/auth.middleware.js";
 import { authRoutes, type AuthRouteOptions } from "./modules/auth/auth.routes.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
 import { healthRoutes, type HealthDeps } from "./modules/health/health.routes.js";
+import { invoiceRoutes } from "./modules/invoices/invoices.routes.js";
+import type { InvoiceService } from "./modules/invoices/invoices.service.js";
 import { orgRoutes } from "./modules/org/org.routes.js";
 import type { OrgService } from "./modules/org/org.service.js";
 
@@ -21,6 +23,7 @@ export interface AppDeps extends HealthDeps, AuthRouteOptions {
   assets: AssetService;
   custody: CustodyService;
   audit: AuditService;
+  invoices: InvoiceService;
 }
 
 /* Builds the Express app from its dependencies, so tests can run it without a real database.
@@ -39,6 +42,7 @@ export function createApp(deps: AppDeps) {
   app.use("/api/assets", assetRoutes(deps.assets, deps.custody, signedIn));
   app.use("/api/custody", custodyRoutes(deps.custody, signedIn));
   app.use("/api/audit", auditRoutes(deps.audit, signedIn));
+  app.use("/api/invoices", invoiceRoutes(deps.invoices, signedIn));
 
   app.use(notFound);
   app.use(errorHandler);

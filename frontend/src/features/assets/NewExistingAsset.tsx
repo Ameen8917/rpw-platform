@@ -51,7 +51,7 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
       <button onClick={onCancel} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Assets</button>
       <PageHead title="Add existing asset" sub="Opening stock — already owned, not procured through the platform" />
 
-      <InvoiceScanner onFill={applyItem} />
+      <InvoiceScanner onFill={applyItem} onAttach={setInvoiceDoc} />
 
       <Card>
         <div className="mb-3 rounded-lg px-3 py-2 text-[12px]" style={{ background: T.slateBg, color: T.sub }}>

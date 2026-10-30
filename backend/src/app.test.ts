@@ -7,6 +7,7 @@ import type { AssetService } from "./modules/assets/assets.service.js";
 import type { CustodyService } from "./modules/assets/custody.service.js";
 import type { AuditService } from "./modules/audit/audit.service.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
+import type { InvoiceService } from "./modules/invoices/invoices.service.js";
 import type { OrgService } from "./modules/org/org.service.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { validate } from "./middleware/validate.js";
@@ -20,6 +21,7 @@ const appWith = (checkDatabase: () => Promise<unknown>) =>
     assets: {} as AssetService,
     custody: {} as CustodyService,
     audit: {} as AuditService,
+    invoices: {} as InvoiceService,
     cookie: { secure: false }, devLoginEnabled: false,
   });
 
@@ -39,13 +41,13 @@ describe("GET /api/health", () => {
 
 describe("auth guard without a session", () => {
   const app = appWith(async () => {});
-  it.each(["/api/auth/me", "/api/org/users", "/api/org/dealerships", "/api/assets", "/api/assets/lookup?code=1", "/api/audit", "/api/custody"])("%s is 401", async (path) => {
+  it.each(["/api/auth/me", "/api/org/users", "/api/org/dealerships", "/api/assets", "/api/assets/lookup?code=1", "/api/audit", "/api/custody", "/api/invoices/status"])("%s is 401", async (path) => {
     const res = await request(app).get(path);
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("unauthorized");
   });
   const someAsset = "/api/assets/00000000-0000-4000-8000-000000000000";
-  it.each(["/api/assets/procured", `${someAsset}/accessories`, `${someAsset}/dispose`])("POST %s is 401", async (path) => {
+  it.each(["/api/assets/procured", `${someAsset}/accessories`, `${someAsset}/dispose`, "/api/invoices/extract"])("POST %s is 401", async (path) => {
     expect((await request(app).post(path).send({})).status).toBe(401);
   });
   it("does not mount development sign-in unless enabled", async () => {

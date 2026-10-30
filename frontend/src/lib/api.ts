@@ -23,14 +23,19 @@ export class ApiError extends Error {
 let onUnauthorized: (() => void) | null = null;
 export function setUnauthorizedHandler(fn: (() => void) | null) { onUnauthorized = fn; }
 
+/* A Blob body (an uploaded file) is sent as it is, with its own type; anything else as JSON */
 async function request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  const file = typeof Blob !== "undefined" && body instanceof Blob ? body : null;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (file) headers["Content-Type"] = file.type || "application/octet-stream";
+  else if (body !== undefined) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       method,
       credentials: "same-origin",
-      headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers,
+      body: file ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
   } catch {
     throw new ApiError(0, "network_error", "Cannot reach the server. Check your connection and try again.");
@@ -49,6 +54,7 @@ async function request<T>(method: "GET" | "POST", path: string, body?: unknown):
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown = {}) => request<T>("POST", path, body),
+  upload: <T>(path: string, file: Blob) => request<T>("POST", path, file),
 };
 
 /** One line for a toast or an inline error: the first field problem if there is one */

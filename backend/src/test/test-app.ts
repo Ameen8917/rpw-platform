@@ -7,6 +7,7 @@ import { createAuditService } from "../modules/audit/audit.service.js";
 import { createFilesService } from "../modules/files/files.service.js";
 import { createMemoryStorage, type FileStorage } from "../modules/files/storage.js";
 import { createAuthService } from "../modules/auth/auth.service.js";
+import { createInvoiceService } from "../modules/invoices/invoices.service.js";
 import { createOrgService } from "../modules/org/org.service.js";
 import { TEST_PASSWORD, TEST_SESSION_SECRET } from "./test-db.js";
 
@@ -25,6 +26,7 @@ export function createTestApp(sequelize: Sequelize, overrides: Partial<AppDeps> 
     assets,
     custody: createCustodyService({ assets, files }),
     audit: createAuditService(),
+    invoices: createInvoiceService({ reader: null, hourlyLimit: 30 }),
     cookie: { secure: false },
     devLoginEnabled: true,
     ...overrides,

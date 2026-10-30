@@ -32,6 +32,10 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.union([z.string().url("must be a URL, e.g. https://<project-ref>.supabase.co"), z.literal("")])
     .optional().transform((v) => (v ? v.replace(/\/+$/, "") : undefined)),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
+  /* Optional AI reading of invoices (decision D6). Without a key, invoices are entered by hand. */
+  ANTHROPIC_API_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
+  INVOICE_AI_MODEL: z.string().regex(/^[a-z0-9.-]+$/, "must be a model ID, e.g. claude-haiku-5-5").default("claude-haiku-5-5"),
+  INVOICE_AI_HOURLY_LIMIT: z.coerce.number().int().min(1).max(1000).default(30),
   SUPABASE_STORAGE_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,62}$/, "must be a bucket name (lowercase, digits, . _ -)").default("rpw-files"),
 }).superRefine((env, ctx) => {
   if (env.NODE_ENV === "production" && env.DEV_LOGIN_ENABLED) {
