@@ -55,6 +55,31 @@ export class Asset extends Model<InferAttributes<Asset>, InferCreationAttributes
   declare acceptanceEvent?: NonAttribute<CustodyEvent | null>;
   declare returnEvent?: NonAttribute<CustodyEvent | null>;
   declare custodyHistory?: NonAttribute<CustodyEvent[]>;
+  declare disposal?: NonAttribute<AssetDisposal | null>;
+}
+
+export class AssetDisposal extends Model<InferAttributes<AssetDisposal>, InferCreationAttributes<AssetDisposal>> {
+  declare assetId: string;
+  declare reason: string;
+  declare scrapValue: Numeric | null;
+  /** Net book value on the day it was written off */
+  declare bookValue: Numeric | null;
+  declare disposedBy: string;
+  declare disposedAt: CreationOptional<Date>;
+}
+
+/** One per requisition: the purchase that created its assets */
+export class AssetProcurement extends Model<InferAttributes<AssetProcurement>, InferCreationAttributes<AssetProcurement>> {
+  declare reqRef: string;
+  declare dealershipId: string;
+  declare vendor: string;
+  declare invoiceNo: string;
+  declare purchaseDate: string;
+  declare total: Numeric;
+  declare invoiceDoc: InvoiceDoc | null;
+  declare verified: boolean;
+  declare recordedBy: string;
+  declare recordedAt: CreationOptional<Date>;
 }
 
 export const RETURN_CONDITIONS = ["Good", "Minor damage", "Damaged — needs repair", "Not working"] as const;
@@ -170,6 +195,29 @@ export function initAssetModels(sequelize: Sequelize) {
     updatedAt: DataTypes.DATE,
   }, { sequelize, tableName: "asset_code_sequences", createdAt: false });
 
+  AssetDisposal.init({
+    assetId: { type: DataTypes.UUID, primaryKey: true },
+    reason: { type: DataTypes.TEXT, allowNull: false },
+    scrapValue: { type: DataTypes.DECIMAL(14, 2) },
+    bookValue: { type: DataTypes.DECIMAL(14, 2) },
+    disposedBy: { type: DataTypes.STRING(40), allowNull: false },
+    disposedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  }, { sequelize, tableName: "asset_disposals", timestamps: false });
+
+  AssetProcurement.init({
+    reqRef: { type: DataTypes.TEXT, primaryKey: true },
+    dealershipId: { type: DataTypes.STRING(40), allowNull: false },
+    vendor: { type: DataTypes.TEXT, allowNull: false },
+    invoiceNo: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    purchaseDate: { type: DataTypes.DATEONLY, allowNull: false },
+    total: { type: DataTypes.DECIMAL(14, 2), allowNull: false },
+    invoiceDoc: { type: DataTypes.JSONB },
+    verified: { type: DataTypes.BOOLEAN, allowNull: false },
+    recordedBy: { type: DataTypes.STRING(40), allowNull: false },
+    recordedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  }, { sequelize, tableName: "asset_procurements", timestamps: false });
+
+  Asset.hasOne(AssetDisposal, { foreignKey: "assetId", as: "disposal" });
   Asset.hasMany(AssetAccessory, { foreignKey: "assetId", as: "accessories" });
   Asset.belongsTo(CustodyEvent, { foreignKey: "custodyEventId", as: "custodyEvent", constraints: false });
   Asset.belongsTo(CustodyEvent, { foreignKey: "acceptanceEventId", as: "acceptanceEvent", constraints: false });

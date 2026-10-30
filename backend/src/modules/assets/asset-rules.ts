@@ -24,6 +24,10 @@ export type AssetSource = (typeof ASSET_SOURCES)[number];
 /** Schedule II residual value assumption, % of cost */
 export const RESIDUAL_PCT = 5;
 
+/** ₹. A separately bought item at or above this is an asset in its own right, not an accessory.
+    Matches LIMITS.capitalisation in the frontend; a group setting once the settings table exists. */
+export const CAPITALISATION_FLOOR = 5000;
+
 /** Calendar date in India ("2026-10-29"); the group operates in IST */
 export function todayIST(now: Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ASSET_SOURCES, ASSET_STATUSES, CATEGORIES } from "./asset-rules.js";
+import { ASSET_SOURCES, ASSET_STATUSES, CAPITALISATION_FLOOR, CATEGORIES, inrFull } from "./asset-rules.js";
 
 const text = (max: number) => z.string().trim().max(max);
 /* Optional reference: "" (an unselected <select>) and null both mean "none" */
@@ -21,6 +21,16 @@ export const assetIdParams = z.object({ id: z.string().uuid("Not an asset ID") }
 /* A full code (RPW/JNS/IT/26-27/0007 or legacy RPW-IT-0142) or the numeric tag ID */
 export const lookupQuery = z.object({ code: text(100).min(1, "Enter a code or tag ID") }).strict();
 
+const invoiceDoc = () => z.object({
+  fileName: text(200).optional(),
+  vendor: text(200).optional(),
+  invoiceNo: text(100).optional(),
+  invoiceDate: isoDate.optional(),
+  total: z.number().nonnegative().max(1e11).optional(),
+}).strict().nullish().transform((v) => v ?? null);
+
+const money = () => z.number().max(1e11);
+
 export const createAssetBody = z.object({
   category: z.enum(CATEGORIES),
   name: text(200).min(1, "Name is required"),
@@ -37,14 +47,67 @@ export const createAssetBody = z.object({
   /** Items issued with the asset that are not assets themselves */
   bundled: z.array(text(100).min(1)).max(20).default([]),
   assignedTo: optionalId,
-  /** Details read from (or typed off) the invoice. The file upload itself arrives with M4. */
-  invoiceDoc: z.object({
-    fileName: text(200).optional(),
-    vendor: text(200).optional(),
-    invoiceNo: text(100).optional(),
-    invoiceDate: isoDate.optional(),
-    total: z.number().nonnegative().max(1e11).optional(),
-  }).strict().nullish().transform((v) => v ?? null),
+  /** Details read from (or typed off) the invoice. Attaching the file itself is not built yet. */
+  invoiceDoc: invoiceDoc(),
 }).strict();
 
 export type CreateAssetInput = z.infer<typeof createAssetBody>;
+
+/* Bundled items are inside the asset cost. Separately bought ones are expensed, so they must be
+   below the capitalisation floor; anything dearer is registered as an asset of its own. */
+export const accessoryBody = z.object({
+  name: text(100).min(1, "Name is required"),
+  origin: z.enum(["bundled", "separate"]),
+  serial: text(100).transform((v) => v || "—").default("—"),
+  cost: money().nonnegative().default(0),
+  addedAt: optionalDate,
+}).strict().superRefine((x, ctx) => {
+  if (x.origin === "bundled" && x.cost !== 0) {
+    ctx.addIssue({ code: "custom", path: ["cost"], message: "Bundled items have no separate cost" });
+  }
+  if (x.origin === "separate" && x.cost <= 0) {
+    ctx.addIssue({ code: "custom", path: ["cost"], message: "Cost is required for an item bought separately" });
+  }
+  if (x.origin === "separate" && x.cost >= CAPITALISATION_FLOOR) {
+    ctx.addIssue({
+      code: "custom", path: ["cost"],
+      message: `At or above the ${inrFull(CAPITALISATION_FLOOR)} capitalisation floor: register it as an asset in its own right`,
+    });
+  }
+});
+
+export type AccessoryInput = z.infer<typeof accessoryBody>;
+
+export const disposeBody = z.object({
+  reason: text(500).min(1, "Reason is required"),
+  scrapValue: money().nonnegative().nullish().transform((v) => v ?? null),
+}).strict();
+
+export type DisposeInput = z.infer<typeof disposeBody>;
+
+/* One requisition's purchase (D4). The requisition is still held in the browser, so its
+   dealership, location and department come with the request and are checked on the server. */
+export const procuredBody = z.object({
+  reqRef: z.string().trim().regex(/^REQ-\d{4}-\d{4,6}$/, "Not a requisition reference (REQ-2026-0027)"),
+  dealershipId: text(40).min(1, "Dealership is required"),
+  facilityId: optionalId,
+  deptId: optionalId,
+  purchaseDate: isoDate,
+  vendor: text(200).min(1, "Vendor is required"),
+  invoiceNo: text(100).default(""),
+  invoiceDoc: invoiceDoc(),
+  /** Each invoice line becomes one asset */
+  assets: z.array(z.object({
+    category: z.enum(CATEGORIES),
+    name: text(200).min(1, "Name is required"),
+    make: text(200).default(""),
+    model: text(200).default(""),
+    serial: text(200).default(""),
+    cost: money().positive("Cost is required"),
+    warranty: optionalDate,
+    bundled: z.array(text(100).min(1)).max(20).default([]),
+    assignedTo: optionalId,
+  }).strict()).min(1, "At least one asset is required").max(50),
+}).strict();
+
+export type ProcuredInput = z.infer<typeof procuredBody>;

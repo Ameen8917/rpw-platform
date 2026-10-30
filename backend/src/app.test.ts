@@ -44,6 +44,10 @@ describe("auth guard without a session", () => {
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("unauthorized");
   });
+  const someAsset = "/api/assets/00000000-0000-4000-8000-000000000000";
+  it.each(["/api/assets/procured", `${someAsset}/accessories`, `${someAsset}/dispose`])("POST %s is 401", async (path) => {
+    expect((await request(app).post(path).send({})).status).toBe(401);
+  });
   it("does not mount development sign-in unless enabled", async () => {
     expect((await request(app).get("/api/auth/dev/users")).status).toBe(404);
   });

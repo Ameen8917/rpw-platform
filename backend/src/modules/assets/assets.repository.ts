@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes, where, type CreationAttributes, type Includeable, type Transaction, type WhereOptions } from "sequelize";
 import { StoredFile } from "../files/files.models.js";
 import type { AssetScope, AssetSource, AssetStatus } from "./asset-rules.js";
-import { Asset, AssetAccessory, AssetCodeSequence, CustodyEvent } from "./assets.models.js";
+import { Asset, AssetAccessory, AssetCodeSequence, AssetDisposal, AssetProcurement, CustodyEvent } from "./assets.models.js";
 
 export interface AssetFilter {
   scope: AssetScope;
@@ -19,7 +19,7 @@ export interface CustodyFilter {
   userId?: string;
 }
 
-/* Everything an AssetDto needs: accessories, and the custody events behind its current state */
+/* Everything an AssetDto needs: accessories, the custody events behind its current state, its disposal */
 /* Factories, not shared objects: Sequelize mutates include definitions while building a query */
 const withSignature = () => ({ model: StoredFile, as: "signatureFile", attributes: ["id", "path"] });
 const standard = (): Includeable[] => [
@@ -27,6 +27,7 @@ const standard = (): Includeable[] => [
   { model: CustodyEvent, as: "custodyEvent" },
   { model: CustodyEvent, as: "acceptanceEvent", include: [withSignature()] },
   { model: CustodyEvent, as: "returnEvent", include: [withSignature()] },
+  { model: AssetDisposal, as: "disposal" },
 ];
 /* Detail adds the full custody history, newest first */
 const detail = (): Includeable[] => [
@@ -109,6 +110,20 @@ export const assetRepository = {
     );
     return row.last_value;
   },
+
+  addAccessory: (x: CreationAttributes<AssetAccessory>, transaction: Transaction) => AssetAccessory.create(x, { transaction }),
+
+  /* Writes the disposal record and marks the asset disposed */
+  async dispose(asset: Asset, d: CreationAttributes<AssetDisposal>, transaction: Transaction) {
+    await AssetDisposal.create(d, { transaction });
+    await asset.update({ status: "disposed" }, { transaction });
+  },
+
+  /* Assets already carrying this requisition reference (including seeded ones) */
+  countByReqRef: (reqRef: string, transaction: Transaction) => Asset.count({ where: { reqRef }, transaction }),
+
+  /* Throws UniqueConstraintError if this requisition was already procured */
+  createProcurement: (p: CreationAttributes<AssetProcurement>, transaction: Transaction) => AssetProcurement.create(p, { transaction }),
 
   async create(
     asset: CreationAttributes<Asset>,

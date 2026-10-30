@@ -61,7 +61,8 @@ describe.skipIf(!env)("assets API (test database)", () => {
 
     it("filters by dealership, source and status", async () => {
       expect((await get(DIRECTOR, "/api/assets?dealershipId=D_JCB_NSK")).body).toHaveLength(4);
-      expect(codes(await get(DIRECTOR, "/api/assets?source=procured")))
+      /* seeded ones only: other test files procure assets too (codes in the new RPW/... format) */
+      expect(codes(await get(DIRECTOR, "/api/assets?source=procured")).filter((c) => c.startsWith("RPW-")))
         .toEqual(["RPW-IT-0171", "RPW-IT-0172", "RPW-IT-0175", "RPW-OFF-0044"]);
       expect(codes(await get(DIRECTOR, "/api/assets?status=under_repair"))).toEqual(["RPW-WRK-0091"]);
       expect(codes(await get(DIRECTOR, "/api/assets?dealershipId=D_JCB_NSK&source=procured"))).toEqual(["RPW-IT-0171", "RPW-IT-0172"]);

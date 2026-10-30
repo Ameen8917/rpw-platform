@@ -1,10 +1,11 @@
 import type { AuditEntryDto } from "../audit/audit.dto.js";
-import { depreciation, type AssetCategory, type AssetSource, type AssetStatus } from "./asset-rules.js";
-import type { Asset, AssetAccessory, CustodyEvent, InvoiceDoc, ReturnCondition } from "./assets.models.js";
+import { depreciation, todayIST, type AssetCategory, type AssetSource, type AssetStatus } from "./asset-rules.js";
+import type { Asset, AssetAccessory, AssetDisposal, CustodyEvent, InvoiceDoc, ReturnCondition } from "./assets.models.js";
 
 /* API shapes. They match Asset / Accessory in frontend/src/types/index.ts, except that
-   purchaseDate is null (not "") when unknown, computed depreciation is included, and
-   signature fields are short-lived URLs (in detail and lookup responses; null in lists). */
+   purchaseDate is null (not "") when unknown, computed depreciation and the disposal record
+   are included, and signature fields are short-lived URLs (in detail and lookup responses;
+   null in lists). */
 
 /** Signed URL per Storage path, for signature images */
 export type SignedUrls = Map<string, string>;
@@ -34,6 +35,15 @@ export interface ReturnRecordDto {
   signature: string | null;
   condition: ReturnCondition;
   missing: string[];
+}
+
+export interface DisposalDto {
+  reason: string;
+  scrapValue: number | null;
+  /** Net book value on the day it was written off */
+  bookValue: number | null;
+  by: string;
+  at: string;
 }
 
 export interface CustodyEventDto {
@@ -77,6 +87,8 @@ export interface AssetDto {
   accessories: AccessoryDto[];
   verified?: boolean;
   invoiceDoc: InvoiceDoc | null;
+  disposal: DisposalDto | null;
+  /** As at today, or for a disposed asset as at its disposal date */
   depreciation: ReturnType<typeof depreciation>;
 }
 
@@ -129,6 +141,14 @@ export function toCustodyEventDto(e: CustodyEvent, urls: SignedUrls): CustodyEve
   };
 }
 
+const toDisposalDto = (d: AssetDisposal | null | undefined): DisposalDto | null => d ? {
+  reason: d.reason,
+  scrapValue: d.scrapValue === null ? null : Number(d.scrapValue),
+  bookValue: d.bookValue === null ? null : Number(d.bookValue),
+  by: d.disposedBy,
+  at: d.disposedAt.toISOString(),
+} : null;
+
 /** `asOf` is the "YYYY-MM-DD" date book values are calculated at */
 export function toAssetDto(a: Asset, asOf: string, urls: SignedUrls = new Map()): AssetDto {
   const cost = Number(a.cost);
@@ -159,6 +179,8 @@ export function toAssetDto(a: Asset, asOf: string, urls: SignedUrls = new Map())
     accessories: [...(a.accessories ?? [])].sort((x, y) => x.position - y.position).map(toAccessoryDto),
     ...(a.verified === null ? {} : { verified: a.verified }),
     invoiceDoc: a.invoiceDoc,
-    depreciation: depreciation({ category: a.category, purchaseDate: a.purchaseDate, cost }, asOf),
+    disposal: toDisposalDto(a.disposal),
+    /* A written-off asset stops depreciating */
+    depreciation: depreciation({ category: a.category, purchaseDate: a.purchaseDate, cost }, a.disposal ? todayIST(a.disposal.disposedAt) : asOf),
   };
 }

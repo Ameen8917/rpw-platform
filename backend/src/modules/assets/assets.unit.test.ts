@@ -5,7 +5,7 @@ import type { UserDto } from "../org/org.dto.js";
 import {
   accessoryCode, assetCode, assetCodePrefix, assetScope, depreciation, fyOf, inScope, todayIST,
 } from "./asset-rules.js";
-import { createAssetBody, lookupQuery } from "./assets.schemas.js";
+import { accessoryBody, createAssetBody, disposeBody, lookupQuery, procuredBody } from "./assets.schemas.js";
 
 describe("asset codes", () => {
   it("labels the April–March financial year", () => {
@@ -106,5 +106,52 @@ describe("add existing asset request", () => {
 
   it("needs something to look up", () => {
     expect(lookupQuery.safeParse({ code: "  " }).success).toBe(false);
+  });
+});
+
+describe("add accessory request", () => {
+  const issueOn = (body: object) => {
+    const r = accessoryBody.safeParse(body);
+    return r.success ? null : r.error.issues.map((i) => i.path.join(".") + ": " + i.message);
+  };
+
+  it("takes bundled items at no cost, and fills in an empty serial", () => {
+    expect(accessoryBody.parse({ name: "Charger", origin: "bundled", serial: "" })).toMatchObject({ cost: 0, serial: "—", addedAt: null });
+    expect(issueOn({ name: "Charger", origin: "bundled", cost: 500 })?.[0]).toMatch(/^cost: Bundled items/);
+  });
+
+  it("needs a cost for separate purchases, below the ₹5,000 capitalisation floor", () => {
+    expect(issueOn({ name: "Mouse", origin: "separate", cost: 4999, addedAt: "2026-10-01" })).toBeNull();
+    expect(issueOn({ name: "Mouse", origin: "separate" })?.[0]).toMatch(/^cost: Cost is required/);
+    expect(issueOn({ name: "Monitor", origin: "separate", cost: 5000 })?.[0]).toMatch(/^cost: At or above the ₹5,000 capitalisation floor/);
+  });
+});
+
+describe("dispose request", () => {
+  it("needs a reason; scrap value is optional and not negative", () => {
+    expect(disposeBody.parse({ reason: " Beyond repair " })).toEqual({ reason: "Beyond repair", scrapValue: null });
+    expect(disposeBody.safeParse({ reason: "", scrapValue: 100 }).success).toBe(false);
+    expect(disposeBody.safeParse({ reason: "Scrapped", scrapValue: -1 }).success).toBe(false);
+  });
+});
+
+describe("procured assets request", () => {
+  const minimal = {
+    reqRef: "REQ-2026-0042", dealershipId: "D_JCB_NSK", purchaseDate: "2026-10-01", vendor: "Croma",
+    assets: [{ category: "IT Equipment", name: "Laptop", cost: 60000 }],
+  };
+
+  it("accepts one line per asset and fills defaults", () => {
+    expect(procuredBody.parse(minimal)).toMatchObject({
+      facilityId: null, deptId: null, invoiceNo: "", invoiceDoc: null,
+      assets: [{ make: "", warranty: null, bundled: [], assignedTo: null }],
+    });
+  });
+
+  it("rejects a malformed reference, no lines, or client-chosen codes", () => {
+    expect(procuredBody.safeParse({ ...minimal, reqRef: "R1730000000" }).success).toBe(false);
+    expect(procuredBody.safeParse({ ...minimal, assets: [] }).success).toBe(false);
+    expect(procuredBody.safeParse({ ...minimal, vendor: "" }).success).toBe(false);
+    expect(procuredBody.safeParse({ ...minimal, assets: [{ ...minimal.assets[0], code: "X" }] }).success).toBe(false);
   });
 });
