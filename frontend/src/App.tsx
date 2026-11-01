@@ -27,6 +27,7 @@ import { Requisitions } from "./features/requisitions/RequisitionList";
 import { Login } from "./features/shell/Login";
 import { NotificationBell } from "./features/shell/NotificationBell";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
+import { useHashRoute } from "./features/shell/route";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
 import { Brand, NavList, ScopeNote } from "./features/shell/Sidebar";
 import { errorMessage } from "./lib/api";
@@ -128,8 +129,8 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
   const { users, dealerships, facilities, departments, setUsers, setDealerships, setFacilities, setDepartments } = org;
   const user = session.user;
   const perm: Permissions = session.permissions;
-  const [view, setView] = useState("dashboard");
-  const [sel, setSel] = useState(null);
+  const [route, navigate] = useHashRoute();
+  const sel = route.id;
   const [toast, setToast] = useState<Toast>(null);
   const [navOpen, setNavOpen] = useState(false);
 
@@ -142,7 +143,7 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
     setToast({ msg, kind });
     setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), kind === "error" ? 6000 : 2600);
   }
-  function go(v, id = null) { setView(v); setSel(id); setNavOpen(false); }
+  function go(v, id = null) { navigate({ view: v, id }); setNavOpen(false); }
   function pushAudit(action, ref, detail) {
     setAuditLog((l) => [aud(new Date().toISOString(), user.id, action, ref, detail), ...l]);
   }
@@ -189,6 +190,9 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
     ...(perm.canSeeAudit ? [{ key: "audit", label: "Audit", icon: ShieldCheck }] : []),
     ...(perm.canAdminConsole ? [{ key: "admin", label: "Admin", icon: Settings }] : []),
   ];
+  /* A page from the URL this user may not open (or a requisition lost on reload, as they live in memory) shows the dashboard */
+  const known = [...NAV.map((n) => n.key), "reqdetail", "newreq", "assetdetail", "newasset"].includes(route.view);
+  const view = !known || (route.view === "reqdetail" && !reqs.some((x) => x.id === sel)) ? "dashboard" : route.view;
 
   /* -------- actions -------- */
   function decide(r, slot, decision, note) {

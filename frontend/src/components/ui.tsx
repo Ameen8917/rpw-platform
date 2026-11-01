@@ -31,8 +31,9 @@ export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled,
   }[kind];
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={cx("inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-[filter,background-color,border-color] duration-150 active:translate-y-px",
-        pad, full && "w-full", disabled ? "cursor-not-allowed opacity-40" : hover)}
+      className={cx("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-[filter,background-color,border-color] duration-150 active:translate-y-px",
+        // Full-width buttons may shrink so two of them share a modal footer instead of overflowing it
+        pad, full ? "w-full min-w-0" : "shrink-0",disabled ? "cursor-not-allowed opacity-40" : hover)}
       style={{ ...styles, boxShadow: kind === "primary" || kind === "secondary" ? "0 1px 1px rgba(26,26,28,.06)" : undefined }}>
       {Icon && <Icon size={size === "sm" ? 14 : 16} strokeWidth={2} />}{children}
     </button>
