@@ -81,7 +81,7 @@ describe.skipIf(!env)("accessories, disposal and procured assets (test database)
       const res = await post(IT_HEAD, "/api/assets/procured", purchase("REQ-2026-0902", { assets: [{ category: "IT Equipment", name: "Router", cost: 9000 }] }));
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ verified: true, assets: [{ verified: true }] });
-      expect((await get(DIRECTOR, "/api/audit?ref=REQ-2026-0902")).body[0]).toMatchObject({ action: "Procured requisition" });
+      expect((await get(DIRECTOR, "/api/audit?ref=REQ-2026-0902")).body.entries[0]).toMatchObject({ action: "Procured requisition" });
     });
 
     it("records each requisition once, including seeded ones and simultaneous attempts", async () => {

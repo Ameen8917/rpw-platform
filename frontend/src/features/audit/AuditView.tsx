@@ -1,36 +1,76 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   RefreshCw, Search,
 } from "lucide-react";
-import { Avatar, Btn, Card, Empty, PageHead } from "../../components/ui";
+import { Pagination } from "../../components/Pagination";
+import { DEFAULT_PAGE_SIZE } from "../../domain/pagination";
+import { Avatar, Btn, Card, Empty, PageHead, SectionTitle } from "../../components/ui";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { T } from "../../theme";
 import type { AuditEntry } from "../../types";
 
-/* Saved entries come from the server (asset actions). `auditLog` holds the requisition and
-   payment steps recorded in this browser only, until those modules have a backend. */
+interface AuditPage {
+  entries: AuditEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/* Saved entries come from the server a page at a time, searched there over the whole trail.
+   `auditLog` holds the requisition and payment steps recorded in this browser only, until those
+   modules have a backend; they cannot be merged into the server's pages, so they show apart. */
 export function AuditView({ ctx, auditLog }) {
   const { U } = ctx;
   const [q, setQ] = useState("");
-  const [saved, setSaved] = useState<AuditEntry[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [saved, setSaved] = useState<AuditPage | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const latest = useRef(0);
+
+  /* Search after a pause in typing, from the first page */
+  useEffect(() => {
+    const t = setTimeout(() => { setQuery(q.trim()); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const load = useCallback(async () => {
-    setError(null);
+    const call = ++latest.current;
+    setLoading(true); setError(null);
     try {
-      setSaved(await api.get<AuditEntry[]>("/audit?limit=1000"));
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), ...(query ? { q: query } : {}) });
+      const res = await api.get<AuditPage>(`/audit?${params}`);
+      if (call === latest.current) setSaved(res);
     } catch (err) {
-      setError(errorMessage(err));
+      if (call === latest.current) setError(errorMessage(err));
+    } finally {
+      if (call === latest.current) setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, query]);
   useEffect(() => { load(); }, [load]);
 
-  const all = [...(saved || []), ...auditLog].sort((x, y) => (x.at < y.at ? 1 : -1));
-  const rows = all.filter((e) => !q || (e.action + e.ref + e.detail + (U(e.actorId)?.name || "")).toLowerCase().includes(q.toLowerCase()));
+  const matches = (e: AuditEntry) => !query || (e.action + e.ref + e.detail + (U(e.actorId)?.name || "")).toLowerCase().includes(query.toLowerCase());
+  const local = auditLog.filter(matches).sort((x, y) => (x.at < y.at ? 1 : -1));
+  const goTo = (p: number) => { setPage(p); window.scrollTo({ top: 0 }); };
+
+  const entry = (e: AuditEntry) => (
+    <div key={e.id} className="flex items-start gap-3 py-3">
+      <Avatar name={U(e.actorId)?.name || "?"} size={32} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm"><b>{U(e.actorId)?.name}</b> <span style={{ color: T.sub }}>· {U(e.actorId)?.title}</span></div>
+        <div className="text-[13px] font-semibold" style={{ color: T.primary }}>{e.action}</div>
+        <div className="text-[13px]" style={{ color: T.sub }}><span className="font-mono">{e.ref}</span> — {e.detail}</div>
+      </div>
+      <div className="shrink-0 text-right text-[11px]" style={{ color: T.sub }}>{fmtDate(e.at)}</div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <PageHead title="Audit trail" sub="Every money & asset-value action, platform-wide" />
+      <PageHead title="Audit trail" sub={saved ? `${saved.total} saved ${saved.total === 1 ? "entry" : "entries"}${query ? " match" : ""}` : "Every money & asset-value action, platform-wide"} />
       <Card pad={false}>
         <div className="p-3">
           <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ border: "1px solid " + T.line }}>
@@ -39,6 +79,15 @@ export function AuditView({ ctx, auditLog }) {
           </div>
         </div>
       </Card>
+
+      {local.length > 0 && (
+        <Card>
+          <SectionTitle>Recorded in this browser, not saved yet</SectionTitle>
+          <p className="mt-1 text-[12px]" style={{ color: T.sub }}>Requisition and payment steps. They are kept until the page is reloaded.</p>
+          <div className="divide-y" style={{ borderColor: T.line }}>{local.map(entry)}</div>
+        </Card>
+      )}
+
       {error && (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -48,22 +97,16 @@ export function AuditView({ ctx, auditLog }) {
         </Card>
       )}
       <Card>
-        {!saved && !error && <Empty msg="Loading saved entries…" />}
-        <div className="divide-y" style={{ borderColor: T.line }}>
-          {rows.map((e) => (
-            <div key={e.id} className="flex items-start gap-3 py-3">
-              <Avatar name={U(e.actorId)?.name || "?"} size={32} />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm"><b>{U(e.actorId)?.name}</b> <span style={{ color: T.sub }}>· {U(e.actorId)?.title}</span></div>
-                <div className="text-[13px] font-semibold" style={{ color: T.primary }}>{e.action}</div>
-                <div className="text-[13px]" style={{ color: T.sub }}><span className="font-mono">{e.ref}</span> — {e.detail}</div>
-              </div>
-              <div className="shrink-0 text-right text-[11px]" style={{ color: T.sub }}>{fmtDate(e.at)}</div>
-            </div>
-          ))}
-          {rows.length === 0 && <Empty msg="No entries." />}
-        </div>
+        {!saved && loading && <Empty msg="Loading saved entries…" />}
+        {saved && (
+          <div className="divide-y" style={{ borderColor: T.line, opacity: loading ? 0.5 : 1, transition: "opacity 150ms" }} aria-busy={loading}>
+            {saved.entries.map(entry)}
+            {saved.entries.length === 0 && <Empty msg={query ? "No saved entries match." : "No entries."} />}
+          </div>
+        )}
       </Card>
+      {saved && <Pagination total={saved.total} page={saved.page} pageSize={saved.pageSize} onPage={goTo}
+        onPageSize={(n) => { setPageSize(n); setPage(1); }} noun="entries" />}
     </div>
   );
 }

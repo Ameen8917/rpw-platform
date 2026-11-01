@@ -32,6 +32,23 @@ describe("asset screens render with seed data", () => {
     expect(html).toContain("Reception Laptop");
   });
 
+  it("asset register pages the list, 10 at a time by default, but prints labels for all of it", () => {
+    const many = Array.from({ length: 60 }, (_, i) => ({ ...SEED_ASSETS[0], id: `a${i}`, code: `RPW-TEST-${String(i).padStart(4, "0")}` }));
+    const html = renderToString(<AssetList ctx={director} assets={many} />).replace(/<!-- -->/g, "");
+    expect(html).toContain("1–10</b> of 60 assets");
+    expect(html).toContain("Rows per page");
+    expect(html).toContain("RPW-TEST-0009");
+    expect(html).not.toContain("RPW-TEST-0010");
+    expect(html).toContain("Print 60 labels");
+  });
+
+  it("shows the pager even when everything fits on one page", () => {
+    const few = SEED_ASSETS.slice(0, 4);
+    const html = renderToString(<AssetList ctx={director} assets={few} />).replace(/<!-- -->/g, "");
+    expect(html).toContain("1–4</b> of 4 assets");
+    expect(html).toContain("Rows per page");
+  });
+
   it("detail of every asset, including issued ones (regression: `user` was undefined)", () => {
     for (const a of SEED_ASSETS) {
       const html = renderToString(

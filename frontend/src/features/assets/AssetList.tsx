@@ -2,20 +2,32 @@ import { useState } from "react";
 import {
   Search, Plus, ChevronRight, FileText,
 } from "lucide-react";
+import { Pagination } from "../../components/Pagination";
 import { Btn, Card, Empty, PageHead, Td, Th, inputStyle } from "../../components/ui";
 import { depreciation } from "../../domain/assets";
+import { DEFAULT_PAGE_SIZE, pageWindow } from "../../domain/pagination";
 import { AssetBadge, SourceTag } from "./AssetBadges";
 import { LabelModal } from "./AssetLabel";
 import { inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
+/* The whole register is loaded once (other screens use it too); it is paged here, in the browser */
 export function AssetList({ ctx, assets }) {
   const { perm, D, F, go } = ctx;
   const [q, setQ] = useState(""); const [src, setSrc] = useState(""); const [dl, setDl] = useState("");
   const [labels, setLabels] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  /* A new search or filter starts again from the first page */
+  const filter = (set: (v: string) => void) => (v: string) => { set(v); setPage(1); };
   const rows = assets.filter((a) =>
     (!q || (a.name + a.code + a.make).toLowerCase().includes(q.toLowerCase())) &&
     (!src || a.source === src) && (!dl || a.dealershipId === dl));
+  /* Labels still print for every matching asset, not just this page */
+  const w = pageWindow(rows.length, page, pageSize);
+  const shown = rows.slice(w.offset, w.offset + pageSize);
+  const pager = <Pagination total={rows.length} page={w.page} pageSize={pageSize} onPage={setPage}
+    onPageSize={(n) => { setPageSize(n); setPage(1); }} noun="assets" />;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -29,12 +41,12 @@ export function AssetList({ ctx, assets }) {
         <div className="flex flex-col gap-2 p-3 md:flex-row">
           <div className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2" style={{ border: "1px solid " + T.line }}>
             <Search size={16} style={{ color: T.sub }} />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search assets…" className="w-full text-sm outline-none" />
+            <input value={q} onChange={(e) => filter(setQ)(e.target.value)} placeholder="Search assets…" className="w-full text-sm outline-none" />
           </div>
-          <select value={dl} onChange={(e) => setDl(e.target.value)} className="rounded-lg px-3 py-2 text-sm" style={inputStyle}>
+          <select value={dl} onChange={(e) => filter(setDl)(e.target.value)} className="rounded-lg px-3 py-2 text-sm" style={inputStyle}>
             <option value="">All dealerships</option>{ctx.dealerships.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <select value={src} onChange={(e) => setSrc(e.target.value)} className="rounded-lg px-3 py-2 text-sm" style={inputStyle}>
+          <select value={src} onChange={(e) => filter(setSrc)(e.target.value)} className="rounded-lg px-3 py-2 text-sm" style={inputStyle}>
             <option value="">All sources</option><option value="procured">Procured via app</option><option value="existing">Existing / opening stock</option>
           </select>
         </div>
@@ -43,7 +55,7 @@ export function AssetList({ ctx, assets }) {
       {rows.length === 0 ? <Card><Empty msg="No assets match." /></Card> : (
         <>
           <div className="space-y-2 md:hidden">
-            {rows.map((a) => (
+            {shown.map((a) => (
               <button key={a.id} onClick={() => go("assetdetail", a.id)} className="w-full text-left"><Card>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -64,7 +76,7 @@ export function AssetList({ ctx, assets }) {
                 <Th>Asset</Th><Th>Dealership</Th><Th>Location</Th><Th>Source</Th><Th>Status</Th><Th right>Cost</Th><Th right>Book value</Th><Th right />
               </tr></thead>
               <tbody>
-                {rows.map((a, i) => (
+                {shown.map((a, i) => (
                   <tr key={a.id} onClick={() => go("assetdetail", a.id)} className="cursor-pointer hover:bg-slate-50" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
                     <Td><div className="font-semibold">{a.name}</div><div className="font-mono text-[11px]" style={{ color: T.sub }}>{a.code}</div></Td>
                     <Td sub>{D(a.dealershipId).name}</Td>
@@ -79,6 +91,7 @@ export function AssetList({ ctx, assets }) {
               </tbody>
             </table>
           </Card>
+          {pager}
         </>
       )}
       {perm.canAddExisting && (
