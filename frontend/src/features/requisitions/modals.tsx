@@ -86,9 +86,9 @@ export function ProcureModal({ r, ctx, onClose, onSubmit }) {
         {rows.map((x, i) => (
           <div key={i} className="rounded-lg p-3" style={{ background: T.canvas }}>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-bold" style={{ color: T.sub }}>
+              <span className="text-xs font-semibold" style={{ color: T.sub }}>
                 Asset {i + 1}
-                {x.fromInvoice && <span className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold" style={{ color: T.primary, background: T.primarySoft }}>from invoice</span>}
+                {x.fromInvoice && <span className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>from invoice</span>}
               </span>
               {rows.length > 1 && <button onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))} style={{ color: T.bad }}><X size={14} /></button>}
             </div>
@@ -110,7 +110,7 @@ export function ProcureModal({ r, ctx, onClose, onSubmit }) {
           </div>
         ))}
         <Btn kind="secondary" size="sm" icon={Plus} onClick={() => setRows((rs) => [...rs, { name: "", category: CATEGORIES[0], make: "", model: "", serial: "", cost: "", warranty: "", bundled: "", assignedTo: "", fromInvoice: false }])}>Add another asset</Btn>
-        <div className="flex items-center justify-between pt-2 text-sm font-bold" style={{ borderTop: "1px solid " + T.line }}>
+        <div className="flex items-center justify-between pt-2 text-sm font-semibold" style={{ borderTop: "1px solid " + T.line }}>
           <span>Total</span><span style={{ color: T.primary }}>{inrFull(total)}</span>
         </div>
       </div>

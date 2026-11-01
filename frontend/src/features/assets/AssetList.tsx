@@ -47,13 +47,13 @@ export function AssetList({ ctx, assets }) {
               <button key={a.id} onClick={() => go("assetdetail", a.id)} className="w-full text-left"><Card>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2"><span className="truncate text-sm font-bold">{a.name}</span><AssetBadge s={a.status} /></div>
+                    <div className="flex items-center gap-2"><span className="truncate text-sm font-semibold">{a.name}</span><AssetBadge s={a.status} /></div>
                     <div className="mt-1 flex flex-wrap gap-x-3 text-[11px]" style={{ color: T.sub }}>
                       <span className="font-mono">{a.code}</span><span>{D(a.dealershipId).name}</span>
                       <SourceTag s={a.source} />
                     </div>
                   </div>
-                  <span className="shrink-0 text-sm font-bold">{inrShort(a.cost)}</span>
+                  <span className="shrink-0 text-sm font-semibold">{inrShort(a.cost)}</span>
                 </div>
               </Card></button>
             ))}

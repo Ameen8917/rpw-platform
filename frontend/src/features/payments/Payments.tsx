@@ -105,15 +105,15 @@ export function Payments({ ctx, reqs }) {
                 <button key={r.id} onClick={() => go("reqdetail", r.id)} className="w-full text-left"><Card>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-bold">{r.item}</div>
+                      <div className="truncate text-sm font-semibold">{r.item}</div>
                       <div className="mt-1 flex flex-wrap gap-x-3 text-[11px]" style={{ color: T.sub }}>
                         <span className="font-mono">{r.ref}</span><span>{D(r.dealershipId).name}</span>
                       </div>
-                      <div className="mt-2"><span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: PAY_STATUS[p].c, background: PAY_STATUS[p].bg }}>{PAY_STATUS[p].label}</span></div>
+                      <div className="mt-2"><span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: PAY_STATUS[p].c, background: PAY_STATUS[p].bg }}>{PAY_STATUS[p].label}</span></div>
                     </div>
                     {due > 0 && <div className="shrink-0 text-right">
                       <div className="text-[10px]" style={{ color: T.sub }}>Amount</div>
-                      <div className="text-sm font-bold">{inrShort(due)}</div>
+                      <div className="text-sm font-semibold">{inrShort(due)}</div>
                     </div>}
                   </div>
                 </Card></button>
@@ -136,8 +136,8 @@ export function Payments({ ctx, reqs }) {
                       <Td sub>{D(r.dealershipId).name}</Td>
                       <Td sub>{DEP(r.deptId).name}</Td>
                       <Td sub>{[r.bh.by && U(r.bh.by).name.split(" ")[0], r.fn.by && U(r.fn.by).name.split(" ")[0]].filter(Boolean).join(" + ")}</Td>
-                      <Td><span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: PAY_STATUS[p].c, background: PAY_STATUS[p].bg }}>{PAY_STATUS[p].label}</span></Td>
-                      <Td right>{due > 0 ? <span className="font-bold">{inrFull(due)}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
+                      <Td><span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: PAY_STATUS[p].c, background: PAY_STATUS[p].bg }}>{PAY_STATUS[p].label}</span></Td>
+                      <Td right>{due > 0 ? <span className="font-semibold">{inrFull(due)}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
                       <Td right><ChevronRight size={16} style={{ color: T.sub, display: "inline" }} /></Td>
                     </tr>
                   );

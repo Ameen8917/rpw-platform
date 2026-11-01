@@ -67,12 +67,12 @@ export function Escalations({ ctx, reqs }) {
                     <tr key={x.id} style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
                       <Td><span className="font-semibold">{U(x.id)?.name}</span></Td>
                       <Td sub>{U(x.id)?.title}</Td>
-                      <Td right>{x.open > 0 ? <span className="font-bold" style={{ color: T.bad }}>{x.open}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
-                      <Td right>{x.covered > 0 ? <span className="font-bold" style={{ color: T.warn }}>{x.covered}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
-                      <Td right><span className="font-bold">{x.total}</span></Td>
+                      <Td right>{x.open > 0 ? <span className="font-semibold" style={{ color: T.bad }}>{x.open}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
+                      <Td right>{x.covered > 0 ? <span className="font-semibold" style={{ color: T.warn }}>{x.covered}</span> : <span style={{ color: T.sub }}>—</span>}</Td>
+                      <Td right><span className="font-semibold">{x.total}</span></Td>
                       <Td right sub>{x.handled}</Td>
                       <Td right>
-                        <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+                        <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium"
                           style={x.rate >= 50 ? { color: T.bad, background: T.badBg } : x.rate >= 25 ? { color: T.warn, background: T.warnBg } : { color: T.ok, background: T.okBg }}>
                           {x.rate.toFixed(0)}%
                         </span>
@@ -121,7 +121,7 @@ export function Escalations({ ctx, reqs }) {
                     {!mineWording && x.ownerId ? ` · ${U(x.ownerId)?.name}` : ""}
                   </div>
                 </div>
-                <span className="shrink-0 text-xs font-bold" style={{ color: T.bad }}>{x.days}d waiting</span>
+                <span className="shrink-0 text-xs font-semibold" style={{ color: T.bad }}>{x.days}d waiting</span>
               </button>
             ))}
           </div>

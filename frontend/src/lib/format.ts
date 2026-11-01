@@ -7,7 +7,7 @@ export const inrFull = (n: number | string) => "₹" + Number(n).toLocaleString(
 export function inrShort(n: number) {
   if (n >= 1e7) return "₹" + (n / 1e7).toFixed(2).replace(/\.00$/, "") + " Cr";
   if (n >= 1e5) return "₹" + (n / 1e5).toFixed(2).replace(/\.00$/, "") + " L";
-  return "₹" + Number(n).toLocaleString("en-IN");
+  return "₹" + Math.round(Number(n)).toLocaleString("en-IN");
 }
 
 export const fmtDate = (iso: string | null | undefined) => {

@@ -121,7 +121,7 @@ export function InvoiceScanner({ onFill, onAttach, compact }: { onFill: (item: a
 
       {items && items.length > 1 && (
         <div className="mt-3">
-          <div className="text-xs font-bold" style={{ color: T.sub }}>{items.length} items on this invoice — pick the one to record</div>
+          <div className="text-xs font-semibold" style={{ color: T.sub }}>{items.length} items on this invoice — pick the one to record</div>
           <div className="mt-2 space-y-1.5">
             {items.map((it, i) => (
               <button key={i} onClick={() => onFill(it, { ...meta, fileName: inv.doc.name, fileUrl: inv.doc.url, fileType: inv.doc.type })}
@@ -191,14 +191,14 @@ export function InvoiceUpload({ r, onExtract }) {
       {data && (
         <div className="mt-2 space-y-2">
           <div className="rounded-lg p-3" style={{ background: "#fff", border: "1px solid " + T.line }}>
-            <div className="text-xs font-bold" style={{ color: T.sub }}>Read from the invoice</div>
+            <div className="text-xs font-semibold" style={{ color: T.sub }}>Read from the invoice</div>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
               <dt style={{ color: T.sub }}>Vendor</dt><dd className="text-right font-semibold">{data.vendor || "—"}</dd>
               <dt style={{ color: T.sub }}>Invoice no.</dt><dd className="text-right font-mono">{data.invoiceNo || "—"}</dd>
               <dt style={{ color: T.sub }}>Date</dt><dd className="text-right">{data.invoiceDate || "—"}</dd>
               {data.subtotal != null && <><dt style={{ color: T.sub }}>Subtotal</dt><dd className="text-right">{inrFull(data.subtotal)}</dd></>}
               {data.tax != null && <><dt style={{ color: T.sub }}>GST</dt><dd className="text-right">{inrFull(data.tax)}</dd></>}
-              <dt className="font-semibold">Total</dt><dd className="text-right font-bold">{data.total != null ? inrFull(data.total) : "—"}</dd>
+              <dt className="font-semibold">Total</dt><dd className="text-right font-semibold">{data.total != null ? inrFull(data.total) : "—"}</dd>
             </dl>
             {data.items?.length > 0 && (
               <div className="mt-2 rounded-lg px-2 py-1.5 text-[11px]" style={{ background: T.primarySoft, color: T.primaryDark }}>

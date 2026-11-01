@@ -46,7 +46,7 @@ export function AssetDetailPage({ ctx, assetId, reqs, auditLog, notify, onChange
   if (load.status !== "ready") {
     return (
       <div className="space-y-4">
-        <button onClick={() => ctx.go("assets")} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Assets</button>
+        <button onClick={() => ctx.go("assets")} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Assets</button>
         <Card>
           {load.status === "loading" ? <Empty msg="Loading asset…" /> : (
             <div className="py-6 text-center">

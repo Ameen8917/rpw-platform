@@ -36,7 +36,7 @@ export function IssueModal({ a, ctx, onClose, onSubmit, busy = false }) {
         </Field>
 
         <div className="rounded-lg p-3" style={{ background: T.canvas }}>
-          <div className="text-xs font-bold" style={{ color: T.sub }}>Items being handed over ({items.length})</div>
+          <div className="text-xs font-semibold" style={{ color: T.sub }}>Items being handed over ({items.length})</div>
           <ul className="mt-1 space-y-0.5">
             {items.map((n, i) => <li key={i} className="text-[13px]">• {n}</li>)}
           </ul>

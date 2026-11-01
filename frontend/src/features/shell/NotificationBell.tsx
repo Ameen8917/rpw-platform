@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  AlertTriangle,
+  Bell,
 } from "lucide-react";
 import { PAY_STATUS, advanceOutstanding, dueAmount, needsPaymentAction, payStatus } from "../../domain/payments";
 import { escalation, needsMyAction } from "../../domain/requisitions";
@@ -32,10 +32,10 @@ export function NotificationBell({ ctx, reqs, go }) {
   });
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="relative flex h-9 w-9 items-center justify-center rounded-lg" style={{ border: "1px solid " + T.line }}>
-        <AlertTriangle size={17} style={{ color: items.length ? T.primary : T.sub }} />
+      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-black/[0.05]">
+        <Bell size={17} strokeWidth={1.75} style={{ color: items.length ? T.ink : T.sub }} />
         {items.length > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: T.bad }}>
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9.5px] font-semibold text-white" style={{ background: T.bad, boxShadow: "0 0 0 2px " + T.canvas }}>
             {items.length}
           </span>
         )}
@@ -43,8 +43,8 @@ export function NotificationBell({ ctx, reqs, go }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-xl py-2 shadow-lg" style={{ background: "#fff", border: "1px solid " + T.line, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wide" style={{ color: T.sub }}>
+          <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-lg py-2 shadow-xl" style={{ background: T.surface, border: "1px solid " + T.line, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+            <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: T.sub }}>
               {items.length ? `${items.length} item${items.length > 1 ? "s" : ""} need you` : "Nothing pending"}
             </div>
             {items.length === 0 && <div className="px-3 py-4 text-center text-sm" style={{ color: T.sub }}>You are all caught up.</div>}

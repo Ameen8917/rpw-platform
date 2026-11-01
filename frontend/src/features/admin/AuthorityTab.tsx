@@ -87,7 +87,7 @@ export function AuthorityTab({ ctx, setUsers, setDealerships, setDepartments, on
             <div className="flex items-center gap-3">
               <Avatar name={u.name} size={34} />
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold">{u.name}</div>
+                <div className="text-sm font-semibold">{u.name}</div>
                 <div className="text-[11px]" style={{ color: T.sub }}>
                   {ROLE_OPTIONS.find((r) => r.value === u.role)?.label} · {u.dealershipIds.map((d) => D(d)?.name).join(", ")}
                 </div>
@@ -96,9 +96,9 @@ export function AuthorityTab({ ctx, setUsers, setDealerships, setDepartments, on
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {CAPABILITIES.filter((c) => c.has(u)).map((c) => (
-                <span key={c.key} className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>{c.short}</span>
+                <span key={c.key} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: T.primarySoft }}>{c.short}</span>
               ))}
-              {u.approvalLimit && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.warn, background: T.warnBg }}>up to {inrShort(u.approvalLimit)}</span>}
+              {u.approvalLimit && <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.warn, background: T.warnBg }}>up to {inrShort(u.approvalLimit)}</span>}
             </div>
           </Card></button>
         ))}
@@ -195,7 +195,7 @@ export function HandoverModal({ leaver, ctx, onClose, onConfirm }) {
         </p>
 
         <div className="rounded-lg p-3" style={{ background: T.primarySoft }}>
-          <div className="text-xs font-bold" style={{ color: T.primaryDark }}>What transfers</div>
+          <div className="text-xs font-semibold" style={{ color: T.primaryDark }}>What transfers</div>
           <ul className="mt-1 space-y-0.5 text-[12px]" style={{ color: T.ink }}>
             <li>• Role: {ROLE_OPTIONS.find((r) => r.value === leaver.role)?.label}</li>
             <li>• Scope: {leaver.dealershipIds.map((d) => D(d)?.name).join(", ")}{leaver.deptId ? ` · ${DEP(leaver.deptId)?.name}` : ""}</li>
@@ -210,7 +210,7 @@ export function HandoverModal({ leaver, ctx, onClose, onConfirm }) {
 
         {held.length > 0 && (
           <div className="rounded-lg p-3" style={{ background: T.warnBg }}>
-            <div className="text-xs font-bold" style={{ color: T.warn }}>Still holding {held.length} asset{held.length > 1 ? "s" : ""} ({heldItems} items)</div>
+            <div className="text-xs font-semibold" style={{ color: T.warn }}>Still holding {held.length} asset{held.length > 1 ? "s" : ""} ({heldItems} items)</div>
             <div className="mt-1 space-y-0.5 text-[12px]" style={{ color: T.ink }}>
               {held.map((a) => <div key={a.id}>• {a.name} <span className="font-mono text-[11px]" style={{ color: T.sub }}>{a.code}</span></div>)}
             </div>
@@ -288,10 +288,10 @@ export function EditAuthority({ u, ctx, onClose, onSave, onHandover }) {
         )}
 
         <div className="rounded-lg p-3" style={{ background: T.primarySoft }}>
-          <div className="text-xs font-bold" style={{ color: T.primaryDark }}>This person will be able to</div>
+          <div className="text-xs font-semibold" style={{ color: T.primaryDark }}>This person will be able to</div>
           <div className="mt-2 flex flex-wrap gap-1">
             {CAPABILITIES.filter((c) => c.has(preview)).map((c) => (
-              <span key={c.key} className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: T.primary, background: "#fff" }}>{c.label}</span>
+              <span key={c.key} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: "#fff" }}>{c.label}</span>
             ))}
             {CAPABILITIES.filter((c) => c.has(preview)).length === 0 && (
               <span className="text-[12px]" style={{ color: T.sub }}>Nothing — view only, and can hold assets.</span>

@@ -17,7 +17,7 @@ export function SignaturePad({ onChange }) {
     if (!drawing.current) return;
     e.preventDefault();
     const c = ref.current.getContext("2d"); const p = pos(e);
-    c.lineTo(p.x, p.y); c.strokeStyle = "#16202E"; c.lineWidth = 2; c.lineCap = "round"; c.stroke();
+    c.lineTo(p.x, p.y); c.strokeStyle = "#1A1A1C"; c.lineWidth = 2; c.lineCap = "round"; c.stroke();
     if (empty) setEmpty(false);
   }
   function end() { if (!drawing.current) return; drawing.current = false; onChange(ref.current.toDataURL("image/png")); }

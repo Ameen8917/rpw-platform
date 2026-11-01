@@ -40,7 +40,7 @@ export function ScanView({ ctx, assets }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold">{hit.name}</h2><AssetBadge s={hit.status} />
+                  <h2 className="font-display text-[22px] font-medium leading-tight">{hit.name}</h2><AssetBadge s={hit.status} />
                 </div>
                 <div className="mt-1 font-mono text-[12px]" style={{ color: T.sub }}>{hit.code} · tag {hit.tagId}</div>
               </div>

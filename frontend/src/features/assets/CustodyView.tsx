@@ -61,14 +61,14 @@ export function CustodyView({ ctx, assets }) {
               <div className="flex items-center gap-3">
                 <Avatar name={u?.name || "?"} size={36} />
                 <div>
-                  <div className="text-sm font-bold">{u?.name}</div>
+                  <div className="text-sm font-semibold">{u?.name}</div>
                   <div className="text-[11px]" style={{ color: T.sub }}>
                     {u?.empCode} · {u?.title}<br />{D(u?.dealershipIds?.[0])?.name}{u?.facilityId ? ` · ${ctx.F(u.facilityId)?.name}` : ""}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold">{items.length} asset{items.length > 1 ? "s" : ""}{accCount ? ` + ${accCount} item${accCount > 1 ? "s" : ""}` : ""}</div>
+                <div className="text-sm font-semibold">{items.length} asset{items.length > 1 ? "s" : ""}{accCount ? ` + ${accCount} item${accCount > 1 ? "s" : ""}` : ""}</div>
                 <div className="text-[11px]" style={{ color: T.sub }}>{inrShort(items.reduce((s2, a) => s2 + a.cost, 0))} value</div>
               </div>
             </div>
@@ -85,7 +85,7 @@ export function CustodyView({ ctx, assets }) {
                     </span>
                   </button>
                   <div className="mt-1">
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium"
                       style={{ color: CUSTODY_LABEL[custodyState(a)].c, background: CUSTODY_LABEL[custodyState(a)].bg }}>
                       {CUSTODY_LABEL[custodyState(a)].label}
                     </span>
@@ -93,7 +93,7 @@ export function CustodyView({ ctx, assets }) {
                   {(a.accessories || []).length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {a.accessories.map((x, i) => (
-                        <span key={i} className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.sub, background: T.slateBg }}>{x.name}</span>
+                        <span key={i} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.sub, background: T.slateBg }}>{x.name}</span>
                       ))}
                     </div>
                   )}

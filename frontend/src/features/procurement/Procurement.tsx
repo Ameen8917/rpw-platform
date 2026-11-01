@@ -68,7 +68,7 @@ export function Procurement({ ctx, reqs, assets }) {
           <Card key={m}>
             <div className="flex items-center justify-between">
               <SectionTitle icon={Calendar}>{monthLabel(m)}</SectionTitle>
-              <span className="text-sm font-bold" style={{ color: T.primary }}>{inrFull(mTotal)}</span>
+              <span className="text-sm font-semibold" style={{ color: T.primary }}>{inrFull(mTotal)}</span>
             </div>
             <div className="mt-3 space-y-2">
               {inMonth.map((r) => {
@@ -80,7 +80,7 @@ export function Procurement({ ctx, reqs, assets }) {
                         <div className="truncate text-sm font-semibold">{r.item}</div>
                         <div className="text-[11px]" style={{ color: T.sub }}>{r.ref} · {D(r.dealershipId).name} · procured by {U(r.procurement.by).name} on {fmtDate(r.procurement.at)}</div>
                       </div>
-                      <span className="ml-2 shrink-0 text-sm font-bold">{inrShort(r.procurement.actualCost)}</span>
+                      <span className="ml-2 shrink-0 text-sm font-semibold">{inrShort(r.procurement.actualCost)}</span>
                     </button>
                     <div className="mt-2 space-y-1">
                       {items.map((a) => (

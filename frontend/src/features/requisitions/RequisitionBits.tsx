@@ -8,21 +8,21 @@ import { T } from "../../theme";
 export function EscalationChip({ r }) {
   const e = escalation(r);
   if (!e) return null;
-  return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.bad, background: T.badBg }}>
+  return <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.bad, background: T.badBg }}>
     <AlertTriangle size={10} />Escalated · {e.days}d
   </span>;
 }
 
 export function ReqBadge({ s }) {
   const v = REQ_STATUS[s];
-  return <span className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: v.c, background: v.bg }}>{v.label}</span>;
+  return <span className="inline-flex whitespace-nowrap rounded-[4px] px-2.5 py-0.5 text-[11px] font-medium" style={{ color: v.c, background: v.bg }}>{v.label}</span>;
 }
 
 export function ApprovalPips({ r, ctx }) {
   const { D } = ctx;
   const isCorp = D(r.dealershipId).isCorporate;
   const pip = (label, d) => (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium"
       style={d === "approved" ? { color: T.ok, background: T.okBg } : d === "rejected" ? { color: T.bad, background: T.badBg } : { color: T.sub, background: T.slateBg }}>
       {d === "approved" ? <CheckCircle2 size={10} /> : d === "rejected" ? <XCircle size={10} /> : <Clock size={10} />}{label}
     </span>
@@ -34,7 +34,7 @@ export function ApprovalPips({ r, ctx }) {
       {needsDirectorPurchase(r) && pip("Director", r.directorPurchase?.decision)}
       <EscalationChip r={r} />
       {r.advance?.required && (
-        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.accent, background: "#FBF3E3" }}>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.accent, background: T.warnBg }}>
           <Landmark size={10} />Advance {inrShort(r.advance.amount)}
         </span>
       )}
@@ -47,7 +47,7 @@ export function ApprovalBox({ label, person, slot, U }) {
   const tone = d === "approved" ? { c: T.ok, bg: T.okBg } : d === "rejected" ? { c: T.bad, bg: T.badBg } : { c: T.sub, bg: T.slateBg };
   return (
     <div className="rounded-lg p-3" style={{ background: tone.bg }}>
-      <div className="flex items-center gap-2 text-xs font-bold" style={{ color: tone.c }}>
+      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: tone.c }}>
         {d === "approved" ? <CheckCircle2 size={14} /> : d === "rejected" ? <XCircle size={14} /> : <Clock size={14} />}
         {label} — {d ? d : "pending"}
       </div>

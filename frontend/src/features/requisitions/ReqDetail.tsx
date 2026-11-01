@@ -56,14 +56,14 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
 
   return (
     <div className="space-y-4">
-      <button onClick={() => go("reqs")} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Requisitions</button>
+      <button onClick={() => go("reqs")} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Requisitions</button>
 
       {esc && (() => {
         const ownerId = esc.stage === "bh" ? (isCorp ? "U_ARJ" : dealership.headId) : DEP(r.deptId).functionalHeadId;
         const isMine = ownerId === user.id;
         return (
           <div className="rounded-lg px-3 py-2.5" style={{ background: T.badBg }}>
-            <div className="flex items-center gap-2 text-xs font-bold" style={{ color: T.bad }}>
+            <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: T.bad }}>
               <AlertTriangle size={14} />
               {isMine ? `Your approval is overdue — ${esc.days} days` : `Escalated to Director — no response in ${esc.days} days`}
             </div>
@@ -78,7 +78,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
 
       {advOut && (
         <div className="rounded-lg px-3 py-2.5" style={{ background: T.badBg }}>
-          <div className="flex items-center gap-2 text-xs font-bold" style={{ color: T.bad }}>
+          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: T.bad }}>
             <AlertTriangle size={14} />Advance outstanding — {inrFull(advOut.amount)}
           </div>
           <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
@@ -103,13 +103,13 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold">{r.item}</h1><ReqBadge s={st} />
+              <h1 className="font-display text-[24px] font-medium leading-tight">{r.item}</h1><ReqBadge s={st} />
             </div>
             <div className="mt-1 font-mono text-[12px]" style={{ color: T.sub }}>{r.ref} · raised by {U(r.raisedBy).name} on {fmtDate(r.raisedAt)}</div>
           </div>
           <div className="text-right">
             <div className="text-[11px]" style={{ color: T.sub }}>{r.procurement ? "Actual" : "Estimated"}</div>
-            <div className="text-lg font-bold">{inrFull(r.procurement ? r.procurement.actualCost : r.estCost)}</div>
+            <div className="font-display text-[24px] font-normal leading-tight">{inrFull(r.procurement ? r.procurement.actualCost : r.estCost)}</div>
           </div>
         </div>
         {(canBH || canFN || canProcure || canDirPurchase) && (
@@ -164,11 +164,11 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SectionTitle icon={Landmark}>Payment</SectionTitle>
-          <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: PAY_STATUS[pst].c, background: PAY_STATUS[pst].bg }}>{PAY_STATUS[pst].label}</span>
+          <span className="whitespace-nowrap rounded-[4px] px-2.5 py-0.5 text-[11px] font-medium" style={{ color: PAY_STATUS[pst].c, background: PAY_STATUS[pst].bg }}>{PAY_STATUS[pst].label}</span>
         </div>
         {r.advance?.required ? (
           <div className="mt-3 rounded-lg p-3" style={{ background: pay.advance ? T.okBg : T.badBg }}>
-            <div className="text-xs font-bold" style={{ color: pay.advance ? T.ok : T.bad }}>
+            <div className="text-xs font-semibold" style={{ color: pay.advance ? T.ok : T.bad }}>
               Vendor advance {pay.advance ? "paid" : "required"} — {inrFull(r.advance.amount)}
             </div>
             {r.advance.terms && <div className="mt-1 text-[12px]" style={{ color: T.ink }}>{r.advance.terms}</div>}
@@ -191,7 +191,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         )}
         {r.procurement && ["finance_signoff", "director_signoff", "balance_to_pay", "settled"].includes(pst) && (
           <div className="mt-2 rounded-lg p-3" style={{ background: r.financeApproval?.decision === "approved" ? T.okBg : r.financeApproval?.decision === "held" ? T.badBg : T.slateBg }}>
-            <div className="text-xs font-bold" style={{ color: r.financeApproval?.decision === "approved" ? T.ok : r.financeApproval?.decision === "held" ? T.bad : T.sub }}>
+            <div className="text-xs font-semibold" style={{ color: r.financeApproval?.decision === "approved" ? T.ok : r.financeApproval?.decision === "held" ? T.bad : T.sub }}>
               Payment sign-off (GM Finance) — {r.financeApproval?.decision === "approved" ? "done" : r.financeApproval?.decision === "held" ? "withheld" : "pending"}
             </div>
             {!r.procurement.invoiceDoc && (
@@ -206,7 +206,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         )}
         {varc && (
           <div className="mt-3 rounded-lg p-3" style={{ background: r.varianceApproval?.decision === "approved" ? T.okBg : T.badBg }}>
-            <div className="text-xs font-bold" style={{ color: r.varianceApproval?.decision === "approved" ? T.ok : T.bad }}>
+            <div className="text-xs font-semibold" style={{ color: r.varianceApproval?.decision === "approved" ? T.ok : T.bad }}>
               Cost overrun {varc.pct.toFixed(0)}% — {inrFull(varc.over)} over estimate
             </div>
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
@@ -220,13 +220,13 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         )}
         {r.procurement && belowDirectorThreshold && ["balance_to_pay", "settled"].includes(pst) && (
           <div className="mt-2 rounded-lg p-3" style={{ background: T.slateBg }}>
-            <div className="text-xs font-bold" style={{ color: T.sub }}>Director approval not required</div>
+            <div className="text-xs font-semibold" style={{ color: T.sub }}>Director approval not required</div>
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>Purchase under {inrShort(LIMITS.directorPayment)} — cleared for payment on GM Finance sign-off.</div>
           </div>
         )}
         {r.procurement && !belowDirectorThreshold && ["director_signoff", "balance_to_pay", "settled"].includes(pst) && (
           <div className="mt-2 rounded-lg p-3" style={{ background: r.directorApproval?.decision === "approved" ? T.okBg : r.directorApproval?.decision === "held" ? T.badBg : T.slateBg }}>
-            <div className="text-xs font-bold" style={{ color: r.directorApproval?.decision === "approved" ? T.ok : r.directorApproval?.decision === "held" ? T.bad : T.sub }}>
+            <div className="text-xs font-semibold" style={{ color: r.directorApproval?.decision === "approved" ? T.ok : r.directorApproval?.decision === "held" ? T.bad : T.sub }}>
               Director approval — {r.directorApproval?.decision === "approved" ? "approved" : r.directorApproval?.decision === "held" ? "held" : "pending"}
             </div>
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
@@ -238,7 +238,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         )}
         {pay.balance && (
           <div className="mt-2 rounded-lg p-3" style={{ background: T.okBg }}>
-            <div className="text-xs font-bold" style={{ color: T.ok }}>Balance paid — {inrFull(pay.balance.amount)}</div>
+            <div className="text-xs font-semibold" style={{ color: T.ok }}>Balance paid — {inrFull(pay.balance.amount)}</div>
             <div className="mt-1 text-[11px]" style={{ color: T.sub }}>
               Paid by {U(pay.balance.by).name} · {fmtDate(pay.balance.at)} · {pay.balance.mode} · UTR <span className="font-mono">{pay.balance.ref}</span>
             </div>
@@ -247,7 +247,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         {r.procurement && (
           <div className="mt-3 flex justify-between border-t pt-2 text-sm" style={{ borderColor: T.line }}>
             <span style={{ color: T.sub }}>Paid {inrFull(paidSoFar(r))} of {inrFull(r.procurement.actualCost)}</span>
-            {balanceDue > 0 && <span className="font-bold" style={{ color: T.warn }}>{inrFull(balanceDue)} outstanding</span>}
+            {balanceDue > 0 && <span className="font-semibold" style={{ color: T.warn }}>{inrFull(balanceDue)} outstanding</span>}
           </div>
         )}
       </Card>
@@ -280,7 +280,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
             return (
               <div className="mt-4 rounded-lg p-3" style={{ background: T.canvas }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold" style={{ color: T.sub }}>Purchase invoice</span>
+                  <span className="text-xs font-semibold" style={{ color: T.sub }}>Purchase invoice</span>
                   <a href={doc.fileUrl} download={doc.fileName} className="text-[12px] font-semibold" style={{ color: T.primary }}>Download</a>
                 </div>
 
@@ -319,12 +319,12 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
           })()}
 
           <div className="mt-4">
-            <div className="mb-2 text-xs font-bold" style={{ color: T.sub }}>Assets created ({linked.length})</div>
+            <div className="mb-2 text-xs font-semibold" style={{ color: T.sub }}>Assets created ({linked.length})</div>
             <div className="space-y-2">
               {linked.map((a) => (
                 <button key={a.id} onClick={() => go("assetdetail", a.id)} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left" style={{ background: T.canvas }}>
                   <div><div className="text-sm font-semibold">{a.name}</div><div className="font-mono text-[11px]" style={{ color: T.sub }}>{a.code}</div></div>
-                  <span className="text-sm font-bold">{inrShort(a.cost)}</span>
+                  <span className="text-sm font-semibold">{inrShort(a.cost)}</span>
                 </button>
               ))}
             </div>

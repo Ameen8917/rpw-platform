@@ -45,9 +45,9 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
               <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold">{d.name}</span>
+                    <span className="text-sm font-semibold">{d.name}</span>
                     <span className="font-mono text-[11px]" style={{ color: T.sub }}>{d.code}</span>
-                    {!d.active && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.warn, background: T.warnBg }}>Inactive</span>}
+                    {!d.active && <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.warn, background: T.warnBg }}>Inactive</span>}
                   </div>
                   <div className="text-[11px]" style={{ color: T.sub }}>
                     {d.brand} · Head: {d.headId ? U(d.headId).name : "unassigned"}{d.territory.length ? ` · ${d.territory.length} districts` : ""}
@@ -70,7 +70,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
               if (!fs.length) return null;
               return (
                 <div key={d.id} className="px-4 py-3">
-                  <div className="mb-2 text-xs font-bold" style={{ color: T.primary }}>{d.name}</div>
+                  <div className="mb-2 text-xs font-semibold" style={{ color: T.primary }}>{d.name}</div>
                   <div className="space-y-1.5">
                     {fs.map((f) => (
                       <div key={f.id} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: T.canvas }}>
@@ -106,10 +106,10 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
               <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold">{d.name}</span>
+                    <span className="text-sm font-semibold">{d.name}</span>
                     {d.dualAuthority
-                      ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>Dual authority</span>
-                      : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.sub, background: T.slateBg }}>Business Head only</span>}
+                      ? <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: T.primarySoft }}>Dual authority</span>
+                      : <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.sub, background: T.slateBg }}>Business Head only</span>}
                   </div>
                   <div className="text-[11px]" style={{ color: T.sub }}>
                     {d.functionalHeadId ? `Functional head: ${U(d.functionalHeadId).name}` : "No corporate functional head"}
@@ -136,7 +136,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
                 Maintained here for now. When the HRMS connection is set up, records will match on employee code — so anything entered now carries over rather than duplicating.
               </p>
             </div>
-            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: T.warn, background: T.warnBg }}>Manual entry</span>
+            <span className="whitespace-nowrap rounded-[4px] px-2.5 py-0.5 text-[11px] font-medium" style={{ color: T.warn, background: T.warnBg }}>Manual entry</span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
             <MiniStat label="Records" value={String(users.length)} />
@@ -153,7 +153,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
       {tab === "users" && (
         <Card pad={false}>
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid " + T.line }}>
-            <span className="text-sm font-bold">{users.length} people</span>
+            <span className="text-sm font-semibold">{users.length} people</span>
             <div className="flex gap-2">
               <Btn size="sm" kind="secondary" icon={FileText} onClick={() => setModal("bulk")}>Paste list</Btn>
               <Btn size="sm" icon={Plus} onClick={() => setModal("user")}>Add person</Btn>
@@ -180,10 +180,10 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {u.inactive
-                    ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.bad, background: T.badBg }}>left</span>
+                    ? <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.bad, background: T.badBg }}>left</span>
                     : u.noLogin
-                    ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.sub, background: T.slateBg }}>no login</span>
-                    : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>{u.role.replace("_", " ")}</span>}
+                    ? <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.sub, background: T.slateBg }}>no login</span>
+                    : <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: T.primarySoft }}>{u.role.replace("_", " ")}</span>}
                 </div>
               </div>
             ))}
@@ -219,7 +219,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
 export function AdminHead({ title, onAdd }) {
   return (
     <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid " + T.line }}>
-      <span className="text-sm font-bold">{title}</span>
+      <span className="text-sm font-semibold">{title}</span>
       <Btn size="sm" icon={Plus} onClick={onAdd}>Add</Btn>
     </div>
   );

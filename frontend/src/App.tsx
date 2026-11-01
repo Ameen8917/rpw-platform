@@ -28,9 +28,9 @@ import { Login } from "./features/shell/Login";
 import { NotificationBell } from "./features/shell/NotificationBell";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
-import { NavList, ScopeNote } from "./features/shell/Sidebar";
+import { Brand, NavList, ScopeNote } from "./features/shell/Sidebar";
 import { errorMessage } from "./lib/api";
-import { inrFull } from "./lib/format";
+import { TODAY, fmtDate, inrFull } from "./lib/format";
 import { T } from "./theme";
 
 type Toast = { msg: string; kind: "ok" | "error" } | null;
@@ -94,8 +94,8 @@ export default function App() {
 
 function Splash({ msg, onRetry, onSignOut }: { msg: string; onRetry?: () => void; onSignOut?: () => void }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-5 text-center" style={{ background: T.canvas, color: T.ink, fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-black text-white" style={{ background: T.primary }}>R</div>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-5 text-center" style={{ background: T.canvas, color: T.ink }}>
+      <Brand />
       <p className="max-w-sm text-sm" style={{ color: onRetry ? T.bad : T.sub }}>{msg}</p>
       {onRetry && (
         <div className="flex gap-2">
@@ -302,40 +302,38 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
   }
 
   return (
-    <div className="min-h-screen w-full" style={{ background: T.canvas, color: T.ink, fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:px-6" style={{ background: T.surface, borderBottom: "1px solid " + T.line }}>
-        <div className="flex items-center gap-3">
-          <button className="md:hidden" onClick={() => setNavOpen(true)} style={{ color: T.ink }}><Menu size={22} /></button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg font-black text-white" style={{ background: T.primary }}>R</div>
-            <div className="leading-tight">
-              <div className="text-sm font-bold">Ratnapprabbha World</div>
-              <div className="text-[11px]" style={{ color: T.sub }}>Assets & Procurement</div>
-            </div>
+    <div className="min-h-screen w-full" style={{ background: T.canvas, color: T.ink }}>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col px-3 py-5 md:flex" style={{ background: T.rail }}>
+        <div className="px-3 pb-7"><Brand dark /></div>
+        <div className="min-h-0 flex-1 overflow-y-auto"><NavList nav={NAV} view={view} go={go} /></div>
+        <ScopeNote user={user} D={D} DEP={DEP} />
+      </aside>
+
+      {navOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" style={{ background: "rgba(18,18,20,.5)" }} onClick={() => setNavOpen(false)}>
+          <div className="flex h-full w-64 flex-col px-3 py-5" style={{ background: T.rail }} onClick={(e) => e.stopPropagation()}>
+            <div className="px-3 pb-6"><Brand dark /></div>
+            <div className="min-h-0 flex-1 overflow-y-auto"><NavList nav={NAV} view={view} go={go} /></div>
+            <ScopeNote user={user} D={D} DEP={DEP} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell ctx={ctx} reqs={visibleReqs} go={go} />
-          <RoleSwitcher users={devUsers} user={user} onChange={onSwitchTo} onSignOut={onSignOut} />
-        </div>
-      </header>
+      )}
 
-      <div className="mx-auto flex max-w-7xl">
-        <aside className="hidden w-56 shrink-0 px-3 py-5 md:block">
-          <NavList nav={NAV} view={view} go={go} />
-          <ScopeNote user={user} D={D} DEP={DEP} />
-        </aside>
-
-        {navOpen && (
-          <div className="fixed inset-0 z-40 md:hidden" style={{ background: "rgba(16,32,46,.45)" }} onClick={() => setNavOpen(false)}>
-            <div className="h-full w-64 px-3 py-5" style={{ background: T.surface }} onClick={(e) => e.stopPropagation()}>
-              <NavList nav={NAV} view={view} go={go} />
-              <ScopeNote user={user} D={D} DEP={DEP} />
-            </div>
+      <div className="md:pl-60">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 px-4 md:px-8"
+          style={{ background: "rgba(244,243,240,.86)", backdropFilter: "saturate(1.4) blur(10px)", borderBottom: "1px solid " + T.line }}>
+          <div className="flex items-center gap-3 md:hidden">
+            <button onClick={() => setNavOpen(true)} aria-label="Open menu" className="-ml-1 rounded-md p-1" style={{ color: T.ink }}><Menu size={20} /></button>
+            <Brand />
           </div>
-        )}
+          <div className="hidden text-[12px] md:block" style={{ color: T.sub }}>{fmtDate(TODAY.toISOString())}</div>
+          <div className="flex items-center gap-1.5">
+            <NotificationBell ctx={ctx} reqs={visibleReqs} go={go} />
+            <RoleSwitcher users={devUsers} user={user} onChange={onSwitchTo} onSignOut={onSignOut} />
+          </div>
+        </header>
 
-        <main className="min-w-0 flex-1 px-4 py-5 pb-24 md:px-6 md:pb-8">
+        <main className="mx-auto min-w-0 max-w-6xl px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-12">
           {view === "dashboard" && <Dashboard ctx={ctx} reqs={visibleReqs} assets={visibleAssets} />}
           {view === "reqs" && <Requisitions ctx={ctx} reqs={visibleReqs} />}
           {view === "reqdetail" && <ReqDetail ctx={ctx} r={reqs.find((x) => x.id === sel)} onDecide={decide} onProcure={procure} onPay={releasePayment} onFinance={financeSignoff} onDirector={directorSignoff} onAdvanceApprove={approveAdvance} onAdvanceEscalate={advanceEscalation} onVariance={varianceApprove} onVerify={verifyEntry} onResubmit={(d) => resubmit(reqs.find((x) => x.id === sel), d)} assets={assets} />}
@@ -373,16 +371,16 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden" style={{ background: T.surface, borderTop: "1px solid " + T.line }}>
         {NAV.slice(0, 5).map((n) => (
-          <button key={n.key} onClick={() => go(n.key)} className="flex flex-1 flex-col items-center gap-0.5 py-2.5" style={{ color: view === n.key ? T.primary : T.sub }}>
-            <n.icon size={19} /><span className="text-[10px] font-semibold">{n.label}</span>
+          <button key={n.key} onClick={() => go(n.key)} className="flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5" style={{ color: view === n.key ? T.primary : T.sub }}>
+            <n.icon size={19} strokeWidth={view === n.key ? 2 : 1.6} /><span className="text-[10px] font-medium">{n.label}</span>
           </button>
         ))}
       </nav>
 
       {toast && (
-        <div role={toast.kind === "error" ? "alert" : "status"} className="fixed bottom-20 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-lg md:bottom-6"
-          style={{ background: toast.kind === "error" ? T.bad : T.ink }}>
-          {toast.kind === "error" ? <AlertTriangle size={16} className="shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" style={{ color: "#7EE0A8" }} />}{toast.msg}
+        <div role={toast.kind === "error" ? "alert" : "status"} className="fixed bottom-20 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2.5 rounded-md px-4 py-2.5 text-[13px] font-medium text-white shadow-xl md:bottom-6 md:left-[calc(50%+120px)]"
+          style={{ background: toast.kind === "error" ? T.bad : T.rail }}>
+          {toast.kind === "error" ? <AlertTriangle size={16} className="shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" style={{ color: "#9CC9A8" }} />}{toast.msg}
         </div>
       )}
     </div>

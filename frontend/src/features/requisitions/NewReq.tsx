@@ -16,7 +16,7 @@ export function NewReq({ ctx, onCancel, onCreate }) {
   const ok = f.item.trim() && f.estCost && f.justification.trim();
   return (
     <div className="space-y-4">
-      <button onClick={onCancel} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Requisitions</button>
+      <button onClick={onCancel} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Requisitions</button>
       <PageHead title="Raise a requisition" sub="Goes to your Business Head and functional head for approval" />
       <Card>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

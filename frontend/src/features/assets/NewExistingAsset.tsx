@@ -44,11 +44,11 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
     setF(next); setFilled(marks); setInvoiceDoc(meta || null);
   }
   const FromInvoice = ({ k }) => filled[k]
-    ? <span className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold" style={{ color: T.primary, background: T.primarySoft }}>from invoice</span>
+    ? <span className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>from invoice</span>
     : null;
   return (
     <div className="space-y-4">
-      <button onClick={onCancel} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Assets</button>
+      <button onClick={onCancel} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Assets</button>
       <PageHead title="Add existing asset" sub="Opening stock — already owned, not procured through the platform" />
 
       <InvoiceScanner onFill={applyItem} onAttach={setInvoiceDoc} />
@@ -90,7 +90,7 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
           {f.bundled.trim() && (
             <div className="mt-2 flex flex-wrap gap-1">
               {parseBundled(f.bundled, "").map((b, i) => (
-                <span key={i} className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: T.primary, background: T.primarySoft }}>{b.name}</span>
+                <span key={i} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: T.primarySoft }}>{b.name}</span>
               ))}
             </div>
           )}

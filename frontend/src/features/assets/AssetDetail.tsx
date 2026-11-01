@@ -35,18 +35,18 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
   };
   return (
     <div className="space-y-4">
-      <button onClick={() => go("assets")} className="flex items-center gap-1 text-sm font-semibold" style={{ color: T.primary }}><ChevronLeft size={16} />Assets</button>
+      <button onClick={() => go("assets")} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Assets</button>
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold">{a.name}</h1><AssetBadge s={a.status} /><SourceTag s={a.source} />
+              <h1 className="font-display text-[24px] font-medium leading-tight">{a.name}</h1><AssetBadge s={a.status} /><SourceTag s={a.source} />
             </div>
             <div className="mt-1 text-sm" style={{ color: T.sub }}>{a.make} {a.model} · <span className="font-mono">{a.code}</span></div>
           </div>
           <div className="text-right">
             <div className="text-[11px]" style={{ color: T.sub }}>Purchase value</div>
-            <div className="text-lg font-bold">{inrFull(a.cost)}</div>
+            <div className="font-display text-[24px] font-normal leading-tight">{inrFull(a.cost)}</div>
           </div>
         </div>
         {perm.canDispose && a.status !== "disposed" && (
@@ -57,7 +57,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
         )}
         {a.disposal && (
           <div className="mt-4 rounded-lg p-3" style={{ background: T.badBg }}>
-            <div className="text-xs font-bold" style={{ color: T.bad }}>Written off on {fmtDate(a.disposal.at)} by {U(a.disposal.by)?.name || "—"}</div>
+            <div className="text-xs font-semibold" style={{ color: T.bad }}>Written off on {fmtDate(a.disposal.at)} by {U(a.disposal.by)?.name || "—"}</div>
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>{a.disposal.reason}</div>
             <div className="mt-1 text-[11px]" style={{ color: T.sub }}>
               {a.disposal.bookValue !== null ? `Book value ${inrFull(Math.round(a.disposal.bookValue))}` : "No book value"}
@@ -103,7 +103,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <SectionTitle icon={UserCheck}>Custody</SectionTitle>
-              <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: CUSTODY_LABEL[cs].c, background: CUSTODY_LABEL[cs].bg }}>
+              <span className="whitespace-nowrap rounded-[4px] px-2.5 py-0.5 text-[11px] font-medium" style={{ color: CUSTODY_LABEL[cs].c, background: CUSTODY_LABEL[cs].bg }}>
                 {CUSTODY_LABEL[cs].label}
               </span>
             </div>
@@ -123,7 +123,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
 
                 {a.acceptance ? (
                   <div className="mt-3 rounded-lg p-3" style={{ background: T.okBg }}>
-                    <div className="text-xs font-bold" style={{ color: T.ok }}>
+                    <div className="text-xs font-semibold" style={{ color: T.ok }}>
                       Acknowledged {a.acceptance.method === "in_app" ? "in app" : "by signature"} on {fmtDate(a.acceptance.at)}
                     </div>
                     <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
@@ -136,7 +136,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
                   </div>
                 ) : (
                   <div className="mt-3 rounded-lg p-3" style={{ background: T.badBg }}>
-                    <div className="text-xs font-bold" style={{ color: T.bad }}>Not yet acknowledged</div>
+                    <div className="text-xs font-semibold" style={{ color: T.bad }}>Not yet acknowledged</div>
                     <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
                       {holder.noLogin
                         ? "Recipient has no login — capture a signature at handover."
@@ -155,7 +155,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
 
             {a.returnRecord && (
               <div className="mt-2 rounded-lg p-3" style={{ background: T.slateBg }}>
-                <div className="text-xs font-bold" style={{ color: T.sub }}>
+                <div className="text-xs font-semibold" style={{ color: T.sub }}>
                   Last returned on {fmtDate(a.returnRecord.at)}{a.returnRecord.from ? ` by ${U(a.returnRecord.from)?.name}` : ""} · condition: {a.returnRecord.condition}
                 </div>
                 {a.returnRecord.missing?.length > 0 && (
@@ -204,10 +204,10 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
                     </div>
                     <div className="shrink-0 text-right">
                       {x.origin === "bundled"
-                        ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.sub, background: T.slateBg }}>In asset cost</span>
+                        ? <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.sub, background: T.slateBg }}>In asset cost</span>
                         : <>
                             <div className="text-sm font-semibold">{inrFull(x.cost || 0)}</div>
-                            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ color: T.warn, background: T.warnBg }}>Expensed</span>
+                            <span className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.warn, background: T.warnBg }}>Expensed</span>
                           </>}
                     </div>
                   </div>

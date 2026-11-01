@@ -87,7 +87,7 @@ export function ReqCard({ r, ctx }) {
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold">{r.item}</div>
+            <div className="truncate text-sm font-semibold">{r.item}</div>
             <div className="mt-1 flex flex-wrap gap-x-3 text-[11px]" style={{ color: T.sub }}>
               <span className="font-mono">{r.ref}</span>
               <span>{D(r.dealershipId).name}</span>
@@ -96,7 +96,7 @@ export function ReqCard({ r, ctx }) {
             <div className="mt-2"><ApprovalPips r={r} ctx={ctx} /></div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <span className="text-sm font-bold">{inrShort(r.procurement ? r.procurement.actualCost : r.estCost)}</span>
+            <span className="text-sm font-semibold">{inrShort(r.procurement ? r.procurement.actualCost : r.estCost)}</span>
             <ReqBadge s={reqStatus(r)} />
           </div>
         </div>
