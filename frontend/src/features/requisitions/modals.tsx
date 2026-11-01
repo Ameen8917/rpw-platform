@@ -10,13 +10,25 @@ import { expandQuantities } from "../invoices/invoiceReader";
 import { inrFull } from "../../lib/format";
 import { T } from "../../theme";
 
-export function DecisionModal({ title, decision, onClose, onSubmit }) {
+/* Runs a save and reports whether it is still going, so a button can show "Saving…" */
+function useBusy() {
+  const [busy, setBusy] = useState(false);
+  const run = async (work: () => unknown) => {
+    setBusy(true);
+    try { await work(); } finally { setBusy(false); }
+  };
+  return [busy, run] as const;
+}
+
+export function DecisionModal({ title, decision, onClose, onSubmit, action = null }) {
   const [note, setNote] = useState("");
+  const [busy, run] = useBusy();
+  const label = action || (decision === "rejected" ? (/hold|withhold/i.test(title) ? "Hold" : /query/i.test(title) ? "Query" : "Reject") : "Approve");
   return (
     <Modal title={title} onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn kind={decision === "rejected" ? "danger" : "primary"} full disabled={decision === "rejected" && !note.trim()} onClick={() => onSubmit(note)}>
-          {decision === "rejected" ? "Reject" : "Approve"}</Btn></>}>
+        <Btn kind={decision === "rejected" ? "danger" : "primary"} full disabled={busy || (decision === "rejected" && !note.trim())} onClick={() => run(() => onSubmit(note))}>
+          {busy ? "Saving…" : label}</Btn></>}>
       <Field label={decision === "rejected" ? "Reason (required)" : "Note (optional)"}>
         <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} style={inputStyle} />
       </Field>
@@ -26,7 +38,7 @@ export function DecisionModal({ title, decision, onClose, onSubmit }) {
 
 export function ProcureModal({ r, ctx, onClose, onSubmit }) {
   const [vendor, setVendor] = useState(""); const [invoice, setInvoice] = useState("");
-  const [date, setDate] = useState("2026-09-06");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [invoiceDoc, setInvoiceDoc] = useState(null);
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState([{ name: "", category: CATEGORIES[0], make: "", model: "", serial: "", cost: "", warranty: "", bundled: "", assignedTo: "", fromInvoice: false }]);
@@ -120,15 +132,15 @@ export function ProcureModal({ r, ctx, onClose, onSubmit }) {
 
 export function ResubmitModal({ r, ctx, onClose, onSubmit }) {
   const [f, setF] = useState({ item: r.item, qty: r.qty, estCost: String(r.estCost), justification: r.justification, expectedDelivery: r.expectedDelivery || "" });
+  const [busy, run] = useBusy();
   const rejectedBy = r.bh.decision === "rejected" ? r.bh : r.fn;
   const ok = f.item.trim() && f.estCost && f.justification.trim();
   return (
     <Modal title="Revise & resubmit" onClose={onClose}
-      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok} onClick={() => onSubmit({
-        dealershipId: r.dealershipId, facilityId: r.facilityId, deptId: r.deptId,
+      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok || busy} onClick={() => run(() => onSubmit({
         item: f.item, qty: Number(f.qty), estCost: Number(f.estCost), justification: f.justification,
         expectedDelivery: f.expectedDelivery,
-      })}>Raise revision</Btn></>}>
+      }))}>{busy ? "Saving…" : "Raise revision"}</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.badBg, color: T.bad }}>
           {r.ref} was rejected{rejectedBy?.by ? ` by ${ctx.U(rejectedBy.by).name}` : ""}{rejectedBy?.note ? `: “${rejectedBy.note}”` : "."}
@@ -150,10 +162,11 @@ export function PayModal({ kind, r, suggested, onClose, onSubmit }) {
   const [amount, setAmount] = useState(String(suggested || ""));
   const [mode, setMode] = useState("NEFT");
   const [ref, setRef] = useState("");
+  const [busy, run] = useBusy();
   const ok = Number(amount) > 0 && ref.trim();
   return (
     <Modal title={kind === "advance" ? "Record advance payment" : "Record balance payment"} onClose={onClose}
-      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok} onClick={() => onSubmit({ amount, mode, ref })}>Save payment</Btn></>}>
+      footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok || busy} onClick={() => run(() => onSubmit({ amount, mode, ref }))}>{busy ? "Saving…" : "Save payment"}</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           {r.ref} · {r.item}

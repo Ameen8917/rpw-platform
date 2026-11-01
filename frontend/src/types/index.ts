@@ -212,7 +212,7 @@ export interface Requisition {
   id: ID;
   ref: string;               // REQ-2026-0027
   dealershipId: ID;
-  facilityId: ID;
+  facilityId: ID | null;
   deptId: ID;
   item: string;
   qty: number;
@@ -236,6 +236,8 @@ export interface Requisition {
   revisionOf?: string;
   resubmittedAs?: string;
   sentBack?: { by: ID; at: ISODate; note: string };
+  /** From the API: the Director must approve the purchase (group limit or an approver's personal limit) */
+  directorPurchaseRequired?: boolean;
 }
 
 /* ------------------------------- Audit ------------------------------------ */

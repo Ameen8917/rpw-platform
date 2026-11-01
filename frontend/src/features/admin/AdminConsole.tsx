@@ -6,21 +6,22 @@ import {
 import { Avatar, Btn, Card, MiniStat, PageHead, SectionTitle } from "../../components/ui";
 import { AuthorityTab } from "./AuthorityTab";
 import { AddDealership, AddDepartment, AddFacility, AddPerson, BulkPeople } from "./forms";
+import { adminApi } from "../requisitions/api";
+import { useAdminSave } from "./useAdminSave";
 import { T } from "../../theme";
 
-export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartments, setUsers, onLog, notify }) {
+export function AdminConsole({ ctx, onChanged, notify }) {
   const { dealerships, facilities, departments, users, U } = ctx;
   const [tab, setTab] = useState("authority");
   const [modal, setModal] = useState(null);
   const [peopleQ, setPeopleQ] = useState("");
+  const save = useAdminSave(onChanged, notify);
+  const close = (saved: Promise<boolean>) => saved.then((ok) => ok && setModal(null));
 
   const tabs: [string, string, LucideIcon][] = [["authority", "Authority", ShieldCheck], ["users", "People", Users], ["dealerships", "Dealerships", Building2], ["facilities", "Locations", MapPin], ["departments", "Departments", Layers]];
 
-  function toggleActive(kind, id) {
-    const setter = kind === "dealerships" ? setDealerships : kind === "facilities" ? setFacilities : setDepartments;
-    setter((list) => list.map((x) => x.id === id ? { ...x, active: !x.active } : x));
-    onLog("Updated master data", id, `${kind.slice(0, -1)} activation toggled`);
-    notify("Master data updated");
+  function toggleActive(kind: "dealerships" | "facilities" | "departments", record: { id: string; active: boolean }) {
+    save(() => adminApi.setActive(kind, record.id, !record.active), "Master data updated");
   }
 
   return (
@@ -54,7 +55,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
                   </div>
                   {d.note && <div className="text-[11px]" style={{ color: T.warn }}>{d.note}</div>}
                 </div>
-                <Btn size="sm" kind="secondary" onClick={() => toggleActive("dealerships", d.id)}>{d.active ? "Deactivate" : "Activate"}</Btn>
+                <Btn size="sm" kind="secondary" onClick={() => toggleActive("dealerships", d)}>{d.active ? "Deactivate" : "Activate"}</Btn>
               </div>
             ))}
           </div>
@@ -78,7 +79,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
                           <div className="text-sm font-semibold">{f.name} {!f.active && <span className="text-[10px]" style={{ color: T.warn }}>(inactive)</span>}</div>
                           <div className="text-[11px]" style={{ color: T.sub }}>{f.type} · {f.district}</div>
                         </div>
-                        <button onClick={() => toggleActive("facilities", f.id)} className="text-[11px] font-semibold" style={{ color: T.primary }}>{f.active ? "Deactivate" : "Activate"}</button>
+                        <button onClick={() => toggleActive("facilities", f)} className="text-[11px] font-semibold" style={{ color: T.primary }}>{f.active ? "Deactivate" : "Activate"}</button>
                       </div>
                     ))}
                   </div>
@@ -115,7 +116,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
                     {d.functionalHeadId ? `Functional head: ${U(d.functionalHeadId).name}` : "No corporate functional head"}
                   </div>
                 </div>
-                <Btn size="sm" kind="secondary" onClick={() => toggleActive("departments", d.id)}>{d.active ? "Deactivate" : "Activate"}</Btn>
+                <Btn size="sm" kind="secondary" onClick={() => toggleActive("departments", d)}>{d.active ? "Deactivate" : "Activate"}</Btn>
               </div>
             ))}
           </div>
@@ -124,7 +125,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
       )}
 
       {tab === "authority" && (
-        <AuthorityTab ctx={ctx} setUsers={setUsers} setDealerships={setDealerships} setDepartments={setDepartments} onLog={onLog} notify={notify} />
+        <AuthorityTab ctx={ctx} onChanged={onChanged} notify={notify} />
       )}
 
       {tab === "users" && (
@@ -142,7 +143,7 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
             <MiniStat label="Records" value={String(users.length)} />
             <MiniStat label="With logins" value={String(users.filter((u) => !u.noLogin).length)} />
             <MiniStat label="Holding assets" value={String(new Set(ctx.assets.filter((a) => a.assignedTo).map((a) => a.assignedTo)).size)} />
-            <MiniStat label="Entered manually" value={String(users.filter((u) => u.source !== "hrms").length)} />
+            <MiniStat label="Left" value={String(users.filter((u) => u.inactive).length)} />
           </div>
           <div className="mt-3 rounded-lg px-3 py-2 text-[12px]" style={{ background: T.canvas, color: T.sub }}>
             Employee code must be unique — it is the key the HRMS sync will match on later. Use exactly the code your HRMS holds.
@@ -191,27 +192,16 @@ export function AdminConsole({ ctx, setDealerships, setFacilities, setDepartment
         </Card>
       )}
 
-      {modal === "dealership" && <AddDealership users={users} onClose={() => setModal(null)} onSave={(d) => {
-        setDealerships((l) => [...l, { id: "D_" + Date.now(), active: true, territory: d.territory.split(",").map((s) => s.trim()).filter(Boolean), ...d }]);
-        onLog("Created dealership", d.code, `${d.name} · ${d.brand}`); notify("Dealership added"); setModal(null);
-      }} />}
-      {modal === "facility" && <AddFacility dealerships={dealerships} onClose={() => setModal(null)} onSave={(f) => {
-        setFacilities((l) => [...l, { id: "F" + Date.now(), active: true, ...f }]);
-        onLog("Created facility", f.name, `${f.type} · ${f.district}`); notify("Facility added"); setModal(null);
-      }} />}
-      {modal === "department" && <AddDepartment users={users} onClose={() => setModal(null)} onSave={(d) => {
-        setDepartments((l) => [...l, { id: "DEP_" + Date.now(), active: true, ...d }]);
-        onLog("Created department", d.name, d.dualAuthority ? "Dual authority" : "Business Head only"); notify("Department added"); setModal(null);
-      }} />}
-      {modal === "user" && <AddPerson ctx={ctx} onClose={() => setModal(null)} onSave={(u) => {
-        setUsers((l) => [...l, { id: "U_" + Date.now(), source: "manual", ...u }]);
-        onLog("Added employee", u.empCode, `${u.name} · ${u.title}`); notify("Employee added"); setModal(null);
-      }} />}
-      {modal === "bulk" && <BulkPeople ctx={ctx} onClose={() => setModal(null)} onSave={(list) => {
-        setUsers((l) => [...l, ...list.map((u, i) => ({ id: "U_" + Date.now() + "_" + i, source: "manual", ...u }))]);
-        onLog("Imported employees", `${list.length} records`, list.map((u) => u.empCode).join(", ").slice(0, 120));
-        notify(`${list.length} employees added`); setModal(null);
-      }} />}
+      {modal === "dealership" && <AddDealership users={users} onClose={() => setModal(null)}
+        onSave={(d) => close(save(() => adminApi.addDealership(d), "Dealership added"))} />}
+      {modal === "facility" && <AddFacility dealerships={dealerships.filter((d) => d.active)} onClose={() => setModal(null)}
+        onSave={(f) => close(save(() => adminApi.addFacility(f), "Facility added"))} />}
+      {modal === "department" && <AddDepartment users={users} onClose={() => setModal(null)}
+        onSave={(d) => close(save(() => adminApi.addDepartment(d), "Department added"))} />}
+      {modal === "user" && <AddPerson ctx={ctx} onClose={() => setModal(null)}
+        onSave={(u) => close(save(() => adminApi.addPerson(u), "Employee added"))} />}
+      {modal === "bulk" && <BulkPeople ctx={ctx} onClose={() => setModal(null)}
+        onSave={(b) => close(save(() => adminApi.addPeople(b), `${b.people.length} employees added`))} />}
     </div>
   );
 }

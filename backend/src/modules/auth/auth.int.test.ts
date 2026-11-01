@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { createApp } from "../../app.js";
 import { createTestApp, sessionCookie, TEST_AUTH_OPTIONS as authOpts } from "../../test/test-app.js";
 import { openTestDatabase, TEST_PASSWORD, testDbEnv } from "../../test/test-db.js";
+import { SEED_DEALERSHIPS, SEED_DEPARTMENTS, SEED_FACILITIES, SEED_USERS } from "../../db/seed/org-data.js";
 import { createThrottle } from "./login-throttle.js";
 import { createAuthService } from "./auth.service.js";
 import { Session } from "./session.model.js";
@@ -124,7 +125,13 @@ describe.skipIf(!env)("auth and org API (test database)", () => {
     it("returns the seeded organisation", async () => {
       const [d, f, dep, u] = await Promise.all([get("dealerships"), get("facilities"), get("departments"), get("users")]);
       expect([d.status, f.status, dep.status, u.status]).toEqual([200, 200, 200, 200]);
-      expect([d.body.length, f.body.length, dep.body.length, u.body.length]).toEqual([8, 16, 9, 23]);
+      /* Every seeded record is there (the Admin console tests may have added more) */
+      const ids = (res: { body: { id: string }[] }) => res.body.map((x) => x.id);
+      expect([SEED_DEALERSHIPS, SEED_FACILITIES, SEED_DEPARTMENTS, SEED_USERS].map((s) => s.length)).toEqual([8, 16, 9, 23]);
+      expect(ids(d)).toEqual(expect.arrayContaining(SEED_DEALERSHIPS.map((x) => x.id)));
+      expect(ids(f)).toEqual(expect.arrayContaining(SEED_FACILITIES.map((x) => x.id)));
+      expect(ids(dep)).toEqual(expect.arrayContaining(SEED_DEPARTMENTS.map((x) => x.id)));
+      expect(ids(u)).toEqual(expect.arrayContaining(SEED_USERS.map((x) => x.id)));
       expect(d.body.find((x: { id: string }) => x.id === "D_CORP")).toMatchObject({ isCorporate: true, headId: "U_ARJ" });
       expect(dep.body.find((x: { id: string }) => x.id === "DEP_IT")).toMatchObject({ dualAuthority: true, functionalHeadId: "U_SUNIL" });
     });
@@ -142,7 +149,9 @@ describe.skipIf(!env)("auth and org API (test database)", () => {
     it("lists only people who can sign in", async () => {
       const res = await request(app).get("/api/auth/dev/users");
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(19);
+      const seededLogins = SEED_USERS.filter((u) => !u.id.startsWith("S_")).map((u) => u.id);
+      expect(seededLogins).toHaveLength(19);
+      expect(res.body.map((u: { id: string }) => u.id)).toEqual(expect.arrayContaining(seededLogins));
       expect(res.body.some((u: { id: string }) => u.id.startsWith("S_"))).toBe(false);
     });
 

@@ -125,6 +125,47 @@ export const assetRepository = {
   /* Throws UniqueConstraintError if this requisition was already procured */
   createProcurement: (p: CreationAttributes<AssetProcurement>, transaction: Transaction) => AssetProcurement.create(p, { transaction }),
 
+  /* The purchases recorded for these requisition references, and the codes they created */
+  purchasesFor: (reqRefs: string[], transaction?: Transaction) =>
+    AssetProcurement.findAll({ where: { reqRef: { [Op.in]: reqRefs } }, transaction }),
+
+  codesFor: (reqRefs: string[], transaction?: Transaction) =>
+    Asset.findAll({
+      where: { reqRef: { [Op.in]: reqRefs } }, attributes: ["code", "reqRef"],
+      order: [["createdAt", "ASC"], ["code", "ASC"]], transaction,
+    }),
+
+  /* A reference is taken once a purchase or an asset carries it */
+  async refInUse(reqRef: string, transaction: Transaction) {
+    const [purchase, assets] = await Promise.all([
+      AssetProcurement.count({ where: { reqRef }, transaction }),
+      Asset.count({ where: { reqRef }, transaction }),
+    ]);
+    return purchase + assets > 0;
+  },
+
+  /* The functional head confirms a manager's entry: the purchase and its assets */
+  async verifyPurchase(reqRef: string, v: { verifiedBy: string; verifiedAt: Date; verificationNote: string }, transaction: Transaction) {
+    await AssetProcurement.update({ verified: true, ...v }, { where: { reqRef }, transaction });
+    await Asset.update({ verified: true }, { where: { reqRef }, transaction });
+  },
+
+  /* The assets of one purchase with their full custody history and any disposal, locked */
+  procuredAssets: (reqRef: string, transaction: Transaction) =>
+    Asset.findAll({
+      where: { reqRef },
+      include: [{ model: CustodyEvent, as: "custodyHistory" }, { model: AssetDisposal, as: "disposal" }],
+      transaction,
+    }),
+
+  /* A sent-back entry: its assets (accessories, custody events and disposal go with them) and
+     the purchase record. The custody pointers are cleared first so no row points at a deleted one. */
+  async removePurchase(reqRef: string, transaction: Transaction) {
+    await Asset.update({ custodyEventId: null, acceptanceEventId: null, returnEventId: null }, { where: { reqRef }, transaction });
+    await Asset.destroy({ where: { reqRef }, transaction });
+    await AssetProcurement.destroy({ where: { reqRef }, transaction });
+  },
+
   async create(
     asset: CreationAttributes<Asset>,
     accessories: Omit<CreationAttributes<AssetAccessory>, "assetId">[],

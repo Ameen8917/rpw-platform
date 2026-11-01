@@ -80,6 +80,10 @@ export class AssetProcurement extends Model<InferAttributes<AssetProcurement>, I
   declare verified: boolean;
   declare recordedBy: string;
   declare recordedAt: CreationOptional<Date>;
+  /* A dealership manager's entry is verified later by the functional head */
+  declare verifiedBy: CreationOptional<string | null>;
+  declare verifiedAt: CreationOptional<Date | null>;
+  declare verificationNote: CreationOptional<string | null>;
 }
 
 export const RETURN_CONDITIONS = ["Good", "Minor damage", "Damaged — needs repair", "Not working"] as const;
@@ -215,6 +219,9 @@ export function initAssetModels(sequelize: Sequelize) {
     verified: { type: DataTypes.BOOLEAN, allowNull: false },
     recordedBy: { type: DataTypes.STRING(40), allowNull: false },
     recordedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    verifiedBy: userRef(),
+    verifiedAt: { type: DataTypes.DATE },
+    verificationNote: { type: DataTypes.TEXT },
   }, { sequelize, tableName: "asset_procurements", timestamps: false });
 
   Asset.hasOne(AssetDisposal, { foreignKey: "assetId", as: "disposal" });

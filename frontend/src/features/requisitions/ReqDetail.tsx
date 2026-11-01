@@ -11,18 +11,22 @@ import { DecisionModal, PayModal, ProcureModal, ResubmitModal } from "./modals";
 import { cx, fmtDate, inrFull, inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
-export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDirector, onAdvanceApprove, onAdvanceEscalate, onVariance, onResubmit, assets }: Record<string, any>) {
-  /* TODO(requisitions): App passes onVerify (functional head verifies a manager's asset entry),
-     but no UI calls it yet, so "awaiting_verification" has no action button. */
-  const { user, perm, D, DEP, F, U, go } = ctx;
+/* Every action goes to the server (App.tsx) and resolves true when saved: the dialog closes then,
+   and stays open with the server's message otherwise. The flags below only decide which buttons show. */
+export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onVerify, onResubmit, assets }: Record<string, any>) {
+  const { user, perm, D, DEP, F, U, go, users } = ctx;
   const [modal, setModal] = useState(null);
+  const done = async (saved: Promise<boolean>) => { if (await saved) setModal(null); };
+  const decide = (stage: string, decision: string) => (note: string) => done(onDecide(r, stage, decision, note));
   if (!r) return <Empty msg="Requisition not found." />;
   const st = reqStatus(r);
   const dealership = D(r.dealershipId);
   const isCorp = dealership.isCorporate;
   const fnHead = U(DEP(r.deptId).functionalHeadId);
   const bhLabel = isCorp ? "Director" : "Business Head";
-  const bhPerson = isCorp ? U("U_ARJ") : U(dealership.headId);
+  /* The Director heads Corporate */
+  const bhPerson = U(dealership.headId);
+  const director = users.find((u) => u.role === "director" && !u.inactive);
 
   /* Derived state — declared before anything that reads it */
   const esc = escalation(r);
@@ -42,7 +46,9 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
   const canResubmit = st === "rejected" && !r.resubmittedAs && (r.raisedBy === user.id || perm.canRaise);
   const canDirPurchase = perm.isDirector && st === "pending" && dirPurchaseNeeded
     && r.bh.decision === "approved" && r.fn.decision === "approved" && !r.directorPurchase?.decision;
-  const forMyDealership = user.dealershipIds?.includes(r.dealershipId) || user.deptId === "DEP_ACC";
+  /* Advances and payments are for the dealership's own accounts team (R4) */
+  const forMyDealership = user.dealershipIds?.includes(r.dealershipId);
+  const canVerify = perm.canVerifyEntry && user.deptId === r.deptId && pst === "awaiting_verification";
   const canApproveAdvance = perm.canApproveAdvance && forMyDealership && pst === "advance_approval";
   const canAdvFinance = perm.canFinanceSignoff && pst === "advance_finance";
   const canAdvDirector = perm.isDirector && pst === "advance_director";
@@ -59,7 +65,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
       <button onClick={() => go("reqs")} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Requisitions</button>
 
       {esc && (() => {
-        const ownerId = esc.stage === "bh" ? (isCorp ? "U_ARJ" : dealership.headId) : DEP(r.deptId).functionalHeadId;
+        const ownerId = esc.stage === "bh" ? dealership.headId : DEP(r.deptId).functionalHeadId;
         const isMine = ownerId === user.id;
         return (
           <div className="rounded-lg px-3 py-2.5" style={{ background: T.badBg }}>
@@ -90,6 +96,11 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
       {r.revisionOf && (
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           Revised resubmission of {r.revisionOf}.
+        </div>
+      )}
+      {r.sentBack && st === "approved" && (
+        <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.warnBg, color: T.warn }}>
+          Asset entry sent back by {U(r.sentBack.by)?.name} on {fmtDate(r.sentBack.at)}: “{r.sentBack.note}”. Record the procurement again.
         </div>
       )}
       {r.resubmittedAs && (
@@ -126,8 +137,10 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         {canResubmit && (
           <div className="mt-4"><Btn size="sm" icon={Plus} onClick={() => setModal("resubmit")}>Revise & resubmit</Btn></div>
         )}
-        {(canApproveAdvance || canAdvFinance || canAdvDirector || canPayAdvance || canPayBalance || canFinanceSignoff || canDirectorSignoff || canVariance) && (
+        {(canApproveAdvance || canAdvFinance || canAdvDirector || canPayAdvance || canPayBalance || canFinanceSignoff || canDirectorSignoff || canVariance || canVerify) && (
           <div className="mt-4 flex flex-wrap gap-2">
+            {canVerify && <><Btn size="sm" icon={CheckCircle2} onClick={() => setModal("verify")}>Verify asset entry</Btn>
+              <Btn size="sm" kind="danger" icon={XCircle} onClick={() => setModal("send_back")}>Send back</Btn></>}
             {canApproveAdvance && <><Btn size="sm" icon={CheckCircle2} onClick={() => setModal("adv_approve")}>Approve advance {inrShort(r.advance.amount)}</Btn>
               <Btn size="sm" kind="danger" icon={XCircle} onClick={() => setModal("adv_hold")}>Hold</Btn></>}
             {canAdvFinance && <><Btn size="sm" icon={CheckCircle2} onClick={() => setModal("advfin_approve")}>Approve advance {inrShort(r.advance.amount)}</Btn>
@@ -157,7 +170,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         <div className={cx("mt-3 grid grid-cols-1 gap-3", dirPurchaseNeeded ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           <ApprovalBox label={bhLabel} person={bhPerson} slot={r.bh} U={U} />
           <ApprovalBox label={`${DEP(r.deptId).name} Head`} person={fnHead} slot={r.fn} U={U} />
-          {dirPurchaseNeeded && <ApprovalBox label="Director" person={U("U_ARJ")} slot={r.directorPurchase || { decision: null }} U={U} />}
+          {dirPurchaseNeeded && <ApprovalBox label="Director" person={director} slot={r.directorPurchase || { decision: null }} U={U} />}
         </div>
       </Card>
 
@@ -198,7 +211,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
               <div className="mt-1 text-[11px] font-semibold" style={{ color: T.bad }}>No invoice attached to this purchase</div>
             )}
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
-              {r.financeApproval?.by ? U(r.financeApproval.by).name : "Sujay Kathar"}
+              {r.financeApproval?.by ? U(r.financeApproval.by).name : users.find((u) => u.grants?.includes("finance_signoff"))?.name}
               {r.financeApproval?.at ? ` · ${fmtDate(r.financeApproval.at)}` : " — third signature required before balance release"}
             </div>
             {r.financeApproval?.note && <div className="mt-1 text-[12px]" style={{ color: T.sub }}>“{r.financeApproval.note}”</div>}
@@ -230,7 +243,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
               Director approval — {r.directorApproval?.decision === "approved" ? "approved" : r.directorApproval?.decision === "held" ? "held" : "pending"}
             </div>
             <div className="mt-1 text-[12px]" style={{ color: T.ink }}>
-              {r.directorApproval?.by ? U(r.directorApproval.by).name : "Arjun"}
+              {r.directorApproval?.by ? U(r.directorApproval.by).name : director?.name}
               {r.directorApproval?.at ? ` · ${fmtDate(r.directorApproval.at)}` : " — final signature before money moves"}
             </div>
             {r.directorApproval?.note && <div className="mt-1 text-[12px]" style={{ color: T.sub }}>“{r.directorApproval.note}”</div>}
@@ -255,7 +268,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
       <Card>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           <Row icon={Building2} k="Dealership" v={`${dealership.name} (${dealership.code})`} />
-          <Row icon={MapPin} k="Facility" v={r.facilityId ? `${F(r.facilityId).name} · ${F(r.facilityId).type}` : "—"} />
+          <Row icon={MapPin} k="Facility" v={r.facilityId && F(r.facilityId) ? `${F(r.facilityId).name} · ${F(r.facilityId).type}` : "—"} />
           <Row icon={Layers} k="Department" v={DEP(r.deptId).name} />
           <Row icon={Hash} k="Quantity" v={String(r.qty)} />
           <Row icon={Calendar} k="Raised on" v={fmtDate(r.raisedAt)} />
@@ -268,7 +281,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         <Card>
           <SectionTitle icon={Package}>Procurement</SectionTitle>
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Row icon={UserCheck} k="Procured by" v={U(r.procurement.by).name} />
+            <Row icon={UserCheck} k="Procured by" v={U(r.procurement.by)?.name} />
             <Row icon={Calendar} k="Date" v={fmtDate(r.procurement.at)} />
             <Row icon={Truck} k="Vendor" v={r.procurement.vendor} />
             <Row icon={FileText} k="Invoice" v={r.procurement.invoice} mono />
@@ -332,43 +345,41 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onFinance, onDir
         </Card>
       )}
 
-      {modal?.startsWith("bh") && <DecisionModal title={`${modal.endsWith("approve") ? "Approve" : "Reject"} as ${bhLabel}`} decision={modal.endsWith("approve") ? "approved" : "rejected"}
-        onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "bh", modal.endsWith("approve") ? "approved" : "rejected", note); setModal(null); }} />}
-      {modal?.startsWith("fn") && <DecisionModal title={`${modal.endsWith("approve") ? "Approve" : "Reject"} as ${DEP(r.deptId).name} Head`} decision={modal.endsWith("approve") ? "approved" : "rejected"}
-        onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "fn", modal.endsWith("approve") ? "approved" : "rejected", note); setModal(null); }} />}
-      {modal === "var_approve" && <DecisionModal title="Approve cost overrun" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onVariance(r, "approved", note); setModal(null); }} />}
-      {modal === "var_reject" && <DecisionModal title="Query cost overrun" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onVariance(r, "queried", note); setModal(null); }} />}
-      {modal === "resubmit" && <ResubmitModal r={r} ctx={ctx} onClose={() => setModal(null)}
-        onSubmit={(draft) => { onResubmit(draft); setModal(null); }} />}
-      {modal === "dp_approve" && <DecisionModal title="Approve purchase — Director" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "directorPurchase", "approved", note); setModal(null); }} />}
-      {modal === "dp_reject" && <DecisionModal title="Reject purchase — Director" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onDecide(r, "directorPurchase", "rejected", note); setModal(null); }} />}
-      {modal === "procure" && <ProcureModal r={r} ctx={ctx} onClose={() => setModal(null)} onSubmit={async (form) => { if (await onProcure(r, form)) setModal(null); }} />}
-      {modal === "pay_advance" && <PayModal kind="advance" r={r} suggested={r.advance.amount} onClose={() => setModal(null)} onSubmit={(form) => { onPay(r, "advance", form); setModal(null); }} />}
-      {modal === "pay_balance" && <PayModal kind="balance" r={r} suggested={balanceDue} onClose={() => setModal(null)} onSubmit={(form) => { onPay(r, "balance", form); setModal(null); }} />}
-      {modal === "fin_approve" && <DecisionModal title="Payment sign-off" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onFinance(r, "approved", note); setModal(null); }} />}
-      {modal === "fin_hold" && <DecisionModal title="Withhold payment sign-off" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onFinance(r, "held", note); setModal(null); }} />}
-      {modal === "dir_approve" && <DecisionModal title="Approve final payment" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onDirector(r, "approved", note); setModal(null); }} />}
-      {modal === "dir_hold" && <DecisionModal title="Hold final payment" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onDirector(r, "held", note); setModal(null); }} />}
-      {modal === "adv_approve" && <DecisionModal title="Approve advance for payment" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceApprove(r, "approved", note); setModal(null); }} />}
-      {modal === "adv_hold" && <DecisionModal title="Hold advance" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceApprove(r, "held", note); setModal(null); }} />}
-      {modal === "advfin_approve" && <DecisionModal title="Approve advance — GM Finance" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceEscalate(r, "advanceFinance", "approved", note); setModal(null); }} />}
-      {modal === "advfin_hold" && <DecisionModal title="Hold advance — GM Finance" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceEscalate(r, "advanceFinance", "held", note); setModal(null); }} />}
-      {modal === "advdir_approve" && <DecisionModal title="Approve advance — Director" decision="approved"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceEscalate(r, "advanceDirector", "approved", note); setModal(null); }} />}
-      {modal === "advdir_hold" && <DecisionModal title="Hold advance — Director" decision="rejected"
-        onClose={() => setModal(null)} onSubmit={(note) => { onAdvanceEscalate(r, "advanceDirector", "held", note); setModal(null); }} />}
+      {modal && DECISIONS[modal] && (() => {
+        const [title, stage, decision] = DECISIONS[modal](bhLabel, DEP(r.deptId).name);
+        return <DecisionModal title={title} decision={decision === "approved" ? "approved" : "rejected"}
+          onClose={() => setModal(null)} onSubmit={decide(stage, decision)} />;
+      })()}
+      {modal === "verify" && <DecisionModal title="Verify asset entry" decision="approved"
+        onClose={() => setModal(null)} onSubmit={(note) => done(onVerify(r, "verified", note))} />}
+      {modal === "send_back" && <DecisionModal title="Send asset entry back" decision="rejected" action="Send back"
+        onClose={() => setModal(null)} onSubmit={(note) => done(onVerify(r, "sent_back", note))} />}
+      {modal === "resubmit" && <ResubmitModal r={r} ctx={ctx} onClose={() => setModal(null)} onSubmit={(draft) => done(onResubmit(draft))} />}
+      {modal === "procure" && <ProcureModal r={r} ctx={ctx} onClose={() => setModal(null)} onSubmit={(form) => done(onProcure(r, form))} />}
+      {modal === "pay_advance" && <PayModal kind="advance" r={r} suggested={r.advance.amount} onClose={() => setModal(null)} onSubmit={(form) => done(onPay(r, "advance", form))} />}
+      {modal === "pay_balance" && <PayModal kind="balance" r={r} suggested={balanceDue} onClose={() => setModal(null)} onSubmit={(form) => done(onPay(r, "balance", form))} />}
     </div>
   );
 }
+
+/* Dialog key → [title, stage, decision] */
+const DECISIONS: Record<string, (bhLabel: string, dept: string) => [string, string, string]> = {
+  bh_approve: (bh) => [`Approve as ${bh}`, "bh", "approved"],
+  bh_reject: (bh) => [`Reject as ${bh}`, "bh", "rejected"],
+  fn_approve: (_, dept) => [`Approve as ${dept} Head`, "fn", "approved"],
+  fn_reject: (_, dept) => [`Reject as ${dept} Head`, "fn", "rejected"],
+  dp_approve: () => ["Approve purchase — Director", "directorPurchase", "approved"],
+  dp_reject: () => ["Reject purchase — Director", "directorPurchase", "rejected"],
+  var_approve: () => ["Approve cost overrun", "varianceApproval", "approved"],
+  var_reject: () => ["Query cost overrun", "varianceApproval", "queried"],
+  fin_approve: () => ["Payment sign-off", "financeApproval", "approved"],
+  fin_hold: () => ["Withhold payment sign-off", "financeApproval", "held"],
+  dir_approve: () => ["Approve final payment", "directorApproval", "approved"],
+  dir_hold: () => ["Hold final payment", "directorApproval", "held"],
+  adv_approve: () => ["Approve advance for payment", "advanceApproval", "approved"],
+  adv_hold: () => ["Hold advance", "advanceApproval", "held"],
+  advfin_approve: () => ["Approve advance — GM Finance", "advanceFinance", "approved"],
+  advfin_hold: () => ["Hold advance — GM Finance", "advanceFinance", "held"],
+  advdir_approve: () => ["Approve advance — Director", "advanceDirector", "approved"],
+  advdir_hold: () => ["Hold advance — Director", "advanceDirector", "held"],
+};

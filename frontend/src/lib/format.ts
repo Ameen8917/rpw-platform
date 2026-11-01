@@ -1,4 +1,5 @@
-export const TODAY = new Date("2026-09-06");
+/* The real date (R5 in docs/requisitions.md); rules that depend on it take an "as of" date for tests */
+export const TODAY = new Date();
 
 export const cx = (...a: unknown[]) => a.filter(Boolean).join(" ");
 

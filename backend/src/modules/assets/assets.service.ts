@@ -5,11 +5,19 @@ import { toAuditEntryDto } from "../audit/audit.dto.js";
 import type { AuthContext } from "../auth/auth.service.js";
 import type { FilesService } from "../files/files.service.js";
 import { orgRepository, type OrgRepository } from "../org/org.repository.js";
-import { assetCode, assetCodePrefix, assetScope, depreciation, inrFull, inScope, todayIST, type AssetSource, type AssetStatus } from "./asset-rules.js";
+import {
+  assetCode, assetCodePrefix, assetScope, CAPITALISATION_FLOOR, depreciation, inrFull, inScope, todayIST,
+  type AssetSource, type AssetStatus,
+} from "./asset-rules.js";
 import { signaturePaths, toAssetDto, toCustodyEventDto, type AssetDetailDto } from "./assets.dto.js";
 import type { Asset } from "./assets.models.js";
 import { assetRepository, type AssetRepository } from "./assets.repository.js";
-import type { AccessoryInput, CreateAssetInput, DisposeInput, ProcuredInput } from "./assets.schemas.js";
+import type { AccessoryInput, CreateAssetInput, DisposeInput } from "./assets.schemas.js";
+import type { ProcureInput } from "../requisitions/requisitions.schemas.js";
+import type { SettingsService } from "../settings/settings.service.js";
+
+/** One requisition's purchase; where it sits comes from the requisition (requisitions.service) */
+export type ProcuredInput = ProcureInput & { reqRef: string; dealershipId: string; facilityId: string | null; deptId: string | null };
 
 export interface AssetServiceOptions {
   assetRepo?: AssetRepository;
@@ -17,6 +25,8 @@ export interface AssetServiceOptions {
   auditRepo?: AuditRepository;
   /** Signs signature image URLs in detail responses; without it they are null */
   files?: Pick<FilesService, "signedUrls">;
+  /** Group limits (the capitalisation floor); defaults when absent */
+  settings?: Pick<SettingsService, "limits">;
   now?: () => Date;
 }
 
@@ -35,6 +45,7 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
   const auditRepo = opts.auditRepo ?? auditRepository;
   const now = opts.now ?? (() => new Date());
   const today = () => todayIST(now());
+  const capitalisationFloor = async () => (opts.settings ? (await opts.settings.limits()).capitalisation : CAPITALISATION_FLOOR);
 
   /* Assets outside the user's scope are reported as not found, so their existence is not revealed.
      People can always see what they hold. */
@@ -174,9 +185,9 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
       return detail((await assetRepo.findById(id))!);
     },
 
-    /* One requisition's purchase (D4): one asset per invoice line. A functional head's entry is
-       verified at once; a dealership manager's awaits verification. Each requisition reference
-       can be procured once, so a requisition that reset in the browser cannot buy twice. */
+    /* One requisition's purchase: one asset per invoice line. Called by the requisitions service
+       once the requisition is approved (R2). A functional head's entry is verified at once; a
+       dealership manager's awaits verification. Each requisition reference is procured once. */
     async createProcured(auth: AuthContext, input: ProcuredInput) {
       if (!auth.permissions.canProcure) throw HttpError.forbidden();
       if (!inScope(assetScope(auth), input.dealershipId)) throw HttpError.forbidden("You cannot record purchases for this dealership");
@@ -194,6 +205,7 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
             reqRef: input.reqRef, dealershipId: dealership.id, vendor: input.vendor, invoiceNo: input.invoiceNo,
             purchaseDate: input.purchaseDate, total, invoiceDoc: input.invoiceDoc, verified,
             recordedBy: auth.user.id, recordedAt,
+            ...(verified ? { verifiedBy: auth.user.id, verifiedAt: recordedAt, verificationNote: "Entered and verified by the functional head." } : {}),
           }, t);
         } catch (err) {
           if (err instanceof UniqueConstraintError) throw alreadyProcured();
@@ -233,6 +245,11 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
     async addAccessory(auth: AuthContext, id: string, input: AccessoryInput) {
       if (!auth.permissions.canAddExisting) throw HttpError.forbidden();
       visible(auth, await assetRepo.findById(id));
+      /* Bought separately: expensed, so it must be below the floor; dearer items are assets of their own */
+      const floor = await capitalisationFloor();
+      if (input.origin === "separate" && input.cost >= floor) {
+        throw invalidField("cost", `At or above the ${inrFull(floor)} capitalisation floor: register it as an asset in its own right`);
+      }
       await assetRepo.transaction(async (t) => {
         const a = await lock(id, t);
         notDisposed(a);

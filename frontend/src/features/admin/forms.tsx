@@ -6,16 +6,16 @@ import { T } from "../../theme";
 
 export function AddPerson({ ctx, onClose, onSave }) {
   const { dealerships, departments, users } = ctx;
-  const [f, setF] = useState({ name: "", empCode: "", dealershipId: dealerships[0].id, facilityId: "", deptId: departments[0].id, title: "", giveLogin: false, role: "manager" });
+  const [f, setF] = useState({ name: "", empCode: "", dealershipId: dealerships[0].id, facilityId: "", deptId: departments[0].id, title: "", giveLogin: false, role: "manager", password: "" });
   const facs = ctx.facilities.filter((x) => x.dealershipId === f.dealershipId && x.active);
   const dup = users.some((u) => u.empCode.toLowerCase() === f.empCode.trim().toLowerCase());
-  const ok = f.name.trim() && f.empCode.trim() && !dup;
+  const ok = f.name.trim() && f.empCode.trim() && !dup && (!f.giveLogin || f.password.length >= 10);
   return (
     <Modal title="Add person" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
         <Btn full disabled={!ok} onClick={() => onSave({
-          name: f.name.trim(), empCode: f.empCode.trim(), dealershipIds: [f.dealershipId], facilityId: f.facilityId || null, deptId: f.deptId,
-          title: f.title.trim() || "—", role: f.giveLogin ? f.role : "staff", noLogin: !f.giveLogin,
+          name: f.name.trim(), empCode: f.empCode.trim(), dealershipId: f.dealershipId, facilityId: f.facilityId || null, deptId: f.deptId || null,
+          title: f.title.trim() || "—", role: f.giveLogin ? f.role : "staff", ...(f.giveLogin ? { password: f.password } : {}),
         })}>Add</Btn></>}>
       <div className="space-y-3">
         <Field label="Full name"><input className={inputCls} style={inputStyle} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
@@ -52,6 +52,13 @@ export function AddPerson({ ctx, onClose, onSave }) {
             <option value="functional_head">Corporate functional head</option>
           </select></Field>
         )}
+        {f.giveLogin && (
+          <Field label="Initial password (at least 10 characters)">
+            <input type="password" autoComplete="new-password" className={inputCls} style={inputStyle} value={f.password}
+              onChange={(e) => setF({ ...f, password: e.target.value })} />
+          </Field>
+        )}
+        {f.giveLogin && <p className="text-[12px]" style={{ color: T.sub }}>Give it to them in person; they sign in with their employee code.</p>}
       </div>
     </Modal>
   );
@@ -78,10 +85,10 @@ export function BulkPeople({ ctx, onClose, onSave }) {
   return (
     <Modal title="Paste employee list" onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
-        <Btn full disabled={!clean.length} onClick={() => onSave(clean.map((r) => ({
-          name: r.name, empCode: r.empCode, title: r.title,
-          dealershipIds: [dealershipId], facilityId: facilityId || null, deptId, role: "staff", noLogin: true,
-        })))}>Add {clean.length} {clean.length === 1 ? "person" : "people"}</Btn></>}>
+        <Btn full disabled={!clean.length} onClick={() => onSave({
+          dealershipId, facilityId: facilityId || null, deptId: deptId || null,
+          people: clean.map((r) => ({ name: r.name, empCode: r.empCode, title: r.title })),
+        })}>Add {clean.length} {clean.length === 1 ? "person" : "people"}</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.primarySoft, color: T.primaryDark }}>
           One person per line: <b>Name, Employee code, Designation</b>. Copy straight from a spreadsheet column set — commas or tabs both work.
@@ -123,16 +130,18 @@ export function BulkPeople({ ctx, onClose, onSave }) {
 }
 
 export function AddDealership({ users, onClose, onSave }) {
-  const [f, setF] = useState({ name: "", brand: "", code: "", headId: "", territory: "" });
-  const ok = f.name.trim() && f.code.trim();
+  const [f, setF] = useState({ name: "", short: "", brand: "", code: "", headId: "", territory: "" });
+  const ok = f.name.trim() && f.brand.trim() && f.code.trim() && /^[A-Za-z]{2,5}$/.test(f.short.trim());
   return (
     <Modal title="Add dealership" onClose={onClose} footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok} onClick={() => onSave(f)}>Add</Btn></>}>
       <div className="space-y-3">
         <Field label="Display name"><input className={inputCls} style={inputStyle} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Mahindra Beedbypass" /></Field>
+        <Field label="Short code — 2 to 5 letters, used in asset codes (RPW/JNS/…)"><input className={inputCls} style={inputStyle} value={f.short} maxLength={5}
+          onChange={(e) => setF({ ...f, short: e.target.value.toUpperCase() })} placeholder="e.g. MBB" /></Field>
         <Field label="Brand"><input className={inputCls} style={inputStyle} value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })} /></Field>
         <Field label="Dealer code"><input className={inputCls} style={inputStyle} value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} /></Field>
         <Field label="Business Head"><select className={inputCls} style={inputStyle} value={f.headId} onChange={(e) => setF({ ...f, headId: e.target.value })}>
-          <option value="">— unassigned —</option>{users.filter((u) => u.role === "business_head").map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
+          <option value="">— unassigned —</option>{users.filter((u) => u.role === "business_head" && !u.inactive).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
         <Field label="Territory districts (comma separated)"><input className={inputCls} style={inputStyle} value={f.territory} onChange={(e) => setF({ ...f, territory: e.target.value })} placeholder="Nashik, Dhule, Jalgaon" /></Field>
       </div>
     </Modal>
@@ -157,7 +166,7 @@ export function AddFacility({ dealerships, onClose, onSave }) {
 
 export function AddDepartment({ users, onClose, onSave }) {
   const [f, setF] = useState({ name: "", dualAuthority: true, functionalHeadId: "" });
-  const ok = f.name.trim();
+  const ok = f.name.trim() && (!f.dualAuthority || f.functionalHeadId);
   return (
     <Modal title="Add department" onClose={onClose} footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn><Btn full disabled={!ok} onClick={() => onSave({ ...f, functionalHeadId: f.functionalHeadId || null })}>Add</Btn></>}>
       <div className="space-y-3">
@@ -166,7 +175,7 @@ export function AddDepartment({ users, onClose, onSave }) {
           <option value="dual">Dual — Business Head + functional head</option><option value="single">Single — Business Head only</option></select></Field>
         {f.dualAuthority && (
           <Field label="Corporate functional head"><select className={inputCls} style={inputStyle} value={f.functionalHeadId} onChange={(e) => setF({ ...f, functionalHeadId: e.target.value })}>
-            <option value="">— select —</option>{users.filter((u) => u.role === "functional_head").map((u) => <option key={u.id} value={u.id}>{u.name} · {u.title}</option>)}</select></Field>
+            <option value="">— select —</option>{users.filter((u) => u.role === "functional_head" && !u.inactive).map((u) => <option key={u.id} value={u.id}>{u.name} · {u.title}</option>)}</select></Field>
         )}
       </div>
     </Modal>

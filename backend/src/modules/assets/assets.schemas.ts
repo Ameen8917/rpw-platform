@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ASSET_SOURCES, ASSET_STATUSES, CAPITALISATION_FLOOR, CATEGORIES, inrFull } from "./asset-rules.js";
+import { ASSET_SOURCES, ASSET_STATUSES, CATEGORIES } from "./asset-rules.js";
 
 const text = (max: number) => z.string().trim().max(max);
 /* Optional reference: "" (an unselected <select>) and null both mean "none" */
@@ -68,12 +68,7 @@ export const accessoryBody = z.object({
   if (x.origin === "separate" && x.cost <= 0) {
     ctx.addIssue({ code: "custom", path: ["cost"], message: "Cost is required for an item bought separately" });
   }
-  if (x.origin === "separate" && x.cost >= CAPITALISATION_FLOOR) {
-    ctx.addIssue({
-      code: "custom", path: ["cost"],
-      message: `At or above the ${inrFull(CAPITALISATION_FLOOR)} capitalisation floor: register it as an asset in its own right`,
-    });
-  }
+  /* The capitalisation floor is a group setting, checked by the service */
 });
 
 export type AccessoryInput = z.infer<typeof accessoryBody>;
@@ -84,30 +79,3 @@ export const disposeBody = z.object({
 }).strict();
 
 export type DisposeInput = z.infer<typeof disposeBody>;
-
-/* One requisition's purchase (D4). The requisition is still held in the browser, so its
-   dealership, location and department come with the request and are checked on the server. */
-export const procuredBody = z.object({
-  reqRef: z.string().trim().regex(/^REQ-\d{4}-\d{4,6}$/, "Not a requisition reference (REQ-2026-0027)"),
-  dealershipId: text(40).min(1, "Dealership is required"),
-  facilityId: optionalId,
-  deptId: optionalId,
-  purchaseDate: isoDate,
-  vendor: text(200).min(1, "Vendor is required"),
-  invoiceNo: text(100).default(""),
-  invoiceDoc: invoiceDoc(),
-  /** Each invoice line becomes one asset */
-  assets: z.array(z.object({
-    category: z.enum(CATEGORIES),
-    name: text(200).min(1, "Name is required"),
-    make: text(200).default(""),
-    model: text(200).default(""),
-    serial: text(200).default(""),
-    cost: money().positive("Cost is required"),
-    warranty: optionalDate,
-    bundled: z.array(text(100).min(1)).max(20).default([]),
-    assignedTo: optionalId,
-  }).strict()).min(1, "At least one asset is required").max(50),
-}).strict();
-
-export type ProcuredInput = z.infer<typeof procuredBody>;

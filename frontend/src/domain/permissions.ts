@@ -16,13 +16,13 @@ export const CAPABILITIES = [
   { key: "advance", label: "Approve vendor advance", short: "Advance",
     has: (u) => u.role === "manager" && u.deptId === "DEP_ACC" },
   { key: "signoff", label: "Payment sign-off", short: "Sign-off",
-    has: (u) => u.id === "U_SUJAY" },
+    has: (u) => !!u.grants?.includes("finance_signoff") },
   { key: "pay", label: "Execute payment & enter UTR", short: "Pay",
     has: (u) => u.role === "accounts_executive" },
   { key: "assets", label: "Add & issue assets", short: "Assets",
     has: (u) => u.role === "functional_head" || u.role === "director" },
   { key: "admin", label: "Admin console", short: "Admin",
-    has: (u) => u.role === "director" || u.id === "U_SUNIL" || u.id === "U_PARESH" },
+    has: (u) => u.role === "director" || !!u.grants?.includes("admin_console") },
 ];
 
 export const ROLE_OPTIONS = [

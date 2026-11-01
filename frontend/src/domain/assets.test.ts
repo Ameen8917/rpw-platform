@@ -36,7 +36,7 @@ describe("depreciation (Schedule II WDV, 5% residual)", () => {
     expect(d.accumulated).toBeCloseTo(95000, 6);
   });
   it("uses the WDV rate that lands on residual after `life` years", () => {
-    const d = depreciation({ category: "IT Equipment", purchaseDate: "2026-09-06", cost: 100000 })!;
+    const d = depreciation({ category: "IT Equipment", purchaseDate: "2026-09-06", cost: 100000 }, new Date("2026-09-06"))!;
     expect(d.nbv).toBe(100000);
     expect(Math.pow(1 - d.rate / 100, d.life)).toBeCloseTo(0.05, 10);
   });

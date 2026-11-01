@@ -1,5 +1,5 @@
 import { api } from "../../lib/api";
-import type { Asset, Department, Dealership, Facility, InvoiceDoc, Requisition, User } from "../../types";
+import type { Asset, Department, Dealership, Facility, InvoiceDoc, User } from "../../types";
 
 /* Asset Management and the reference data it needs, read and written through the API.
    The request bodies here are the backend's Zod contracts (docs/asset-management.md, section 6). */
@@ -23,27 +23,12 @@ export const orgApi = {
   },
 };
 
-/** What the API returns for one requisition's purchase */
-export interface ProcurementResult {
-  reqRef: string;
-  by: string;
-  at: string;
-  actualCost: number;
-  vendor: string;
-  invoice: string;
-  invoiceDoc: InvoiceDoc | null;
-  verified: boolean;
-  assetCodes: string[];
-  assets: Asset[];
-}
-
 const id = encodeURIComponent;
 
 export const assetApi = {
   list: () => api.get<Asset[]>("/assets"),
   get: (assetId: string) => api.get<Asset>(`/assets/${id(assetId)}`),
   create: (body: ReturnType<typeof toCreateBody>) => api.post<Asset>("/assets", body),
-  procure: (body: ReturnType<typeof toProcuredBody>) => api.post<ProcurementResult>("/assets/procured", body),
   issue: (assetId: string, d: { who: string; method: "in_app" | "signature"; signature?: string | null; note?: string }) =>
     api.post<Asset>(`/assets/${id(assetId)}/issue`, {
       userId: d.who, method: d.method, note: d.note?.trim() || undefined,
@@ -94,18 +79,3 @@ export function toCreateBody(f: {
   };
 }
 
-/** The "Record procurement" form of a requisition → POST /api/assets/procured */
-export function toProcuredBody(r: Pick<Requisition, "ref" | "dealershipId" | "facilityId" | "deptId">, form: {
-  vendor: string; invoice: string; date: string; invoiceDoc?: InvoiceDoc | null;
-  assets: { category: string; name: string; make: string; model: string; serial: string; cost: string | number; warranty: string; bundled: string; assignedTo: string }[];
-}) {
-  return {
-    reqRef: r.ref, dealershipId: r.dealershipId, facilityId: r.facilityId || null, deptId: r.deptId || null,
-    purchaseDate: form.date, vendor: form.vendor.trim(), invoiceNo: form.invoice.trim(),
-    invoiceDoc: invoiceDetails(form.invoiceDoc),
-    assets: form.assets.map((a) => ({
-      category: a.category, name: a.name, make: a.make, model: a.model, serial: a.serial, cost: Number(a.cost),
-      warranty: a.warranty || null, bundled: bundledNames(a.bundled), assignedTo: a.assignedTo || null,
-    })),
-  };
-}

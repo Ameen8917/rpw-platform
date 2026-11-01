@@ -20,8 +20,9 @@ describe("reqStatus", () => {
 
 describe("escalation", () => {
   it("flags approver silence at or beyond the SLA, measured from the previous stage", () => {
-    expect(escalation(byRef("REQ-2026-0034"))).toBeNull();                      // raised 2 days ago
-    expect(escalation(byRef("REQ-2026-0033"))).toEqual({ stage: "fn", days: 3 }); // BH acted 3 days ago
+    const asOf = new Date("2026-09-06");
+    expect(escalation(byRef("REQ-2026-0034"), asOf)).toBeNull();                      // raised 2 days ago
+    expect(escalation(byRef("REQ-2026-0033"), asOf)).toEqual({ stage: "fn", days: 3 }); // BH acted 3 days ago
   });
 });
 

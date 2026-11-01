@@ -60,10 +60,10 @@ export function accessoryCode(parent: Pick<Asset, "code">, index: number) { retu
 
 /* Depreciation — Companies Act 2013 Schedule II, WDV, 5% residual.
    Returns accumulated depreciation and net book value as at today. */
-export function depreciation(a: Pick<Asset, "category" | "purchaseDate" | "cost">) {
+export function depreciation(a: Pick<Asset, "category" | "purchaseDate" | "cost">, asOf: Date = TODAY) {
   const life = CATEGORY_META[a.category]?.life;
   if (!life || !a.purchaseDate || !a.cost) return null;
-  const years = Math.max(0, (TODAY.getTime() - new Date(a.purchaseDate).getTime()) / (365.25 * 86400000));
+  const years = Math.max(0, (asOf.getTime() - new Date(a.purchaseDate).getTime()) / (365.25 * 86400000));
   const residual = a.cost * (RESIDUAL_PCT / 100);
   const rate = 1 - Math.pow(residual / a.cost, 1 / life);
   const elapsed = Math.min(years, life);

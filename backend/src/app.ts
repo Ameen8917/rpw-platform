@@ -14,6 +14,10 @@ import { healthRoutes, type HealthDeps } from "./modules/health/health.routes.js
 import { invoiceRoutes } from "./modules/invoices/invoices.routes.js";
 import type { InvoiceService } from "./modules/invoices/invoices.service.js";
 import { orgRoutes } from "./modules/org/org.routes.js";
+import { requisitionRoutes } from "./modules/requisitions/requisitions.routes.js";
+import type { RequisitionService } from "./modules/requisitions/requisitions.service.js";
+import { settingsRoutes } from "./modules/settings/settings.routes.js";
+import type { SettingsService } from "./modules/settings/settings.service.js";
 import type { OrgService } from "./modules/org/org.service.js";
 
 export interface AppDeps extends HealthDeps, AuthRouteOptions {
@@ -24,6 +28,8 @@ export interface AppDeps extends HealthDeps, AuthRouteOptions {
   custody: CustodyService;
   audit: AuditService;
   invoices: InvoiceService;
+  requisitions: RequisitionService;
+  settings: SettingsService;
 }
 
 /* Builds the Express app from its dependencies, so tests can run it without a real database.
@@ -43,6 +49,8 @@ export function createApp(deps: AppDeps) {
   app.use("/api/custody", custodyRoutes(deps.custody, signedIn));
   app.use("/api/audit", auditRoutes(deps.audit, signedIn));
   app.use("/api/invoices", invoiceRoutes(deps.invoices, signedIn));
+  app.use("/api/requisitions", requisitionRoutes(deps.requisitions, signedIn));
+  app.use("/api/settings", settingsRoutes(deps.settings, signedIn));
 
   app.use(notFound);
   app.use(errorHandler);
