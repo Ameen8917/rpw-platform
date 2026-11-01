@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CATEGORIES } from "../assets/asset-rules.js";
+import { sniffFileType, type FileMediaType } from "../files/file-types.js";
 
 /* Size caps. Claude takes images up to 5 MB once base64-encoded (about 3.75 MB of file), so
    images stop below that; the browser shrinks large phone photos before sending them. */
@@ -8,18 +9,10 @@ export const INVOICE_LIMITS = {
   pdfBytes: 8 * 1024 * 1024,
 } as const;
 
-export type InvoiceMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp" | "application/pdf";
+export type InvoiceMediaType = FileMediaType;
 
-/* The type comes from the file's first bytes, not from the Content-Type the client claims */
-export function sniffInvoiceType(bytes: Buffer): InvoiceMediaType | null {
-  const starts = (sig: number[], at = 0) => bytes.length >= at + sig.length && sig.every((b, i) => bytes[at + i] === b);
-  if (starts([0x25, 0x50, 0x44, 0x46, 0x2d])) return "application/pdf";                        // %PDF-
-  if (starts([0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
-  if (starts([0x47, 0x49, 0x46, 0x38])) return "image/gif";                                     // GIF8
-  if (starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8)) return "image/webp"; // RIFF....WEBP
-  return null;
-}
+/* The type comes from the file's first bytes (shared with stored attachments) */
+export const sniffInvoiceType = sniffFileType;
 
 /* JSON schema Claude's answer is constrained to (structured outputs). Every key is required and
    nullable, so "not printed on the invoice" is an explicit null rather than a missing key. */

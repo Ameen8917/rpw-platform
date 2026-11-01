@@ -10,7 +10,7 @@ import { assetApi } from "./api";
 type Load = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; asset: Asset };
 
 /* Asset detail backed by the API: loads the full record (custody history, activity, signature
-   links) and sends each action to the server. The screen updates from the server's answer. */
+   and attachment links) and sends each action to the server. The screen updates from the server's answer. */
 export function AssetDetailPage({ ctx, assetId, reqs, auditLog, notify, onChanged }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
 
@@ -24,6 +24,14 @@ export function AssetDetailPage({ ctx, assetId, reqs, auditLog, notify, onChange
   }, [assetId]);
 
   useEffect(() => { fetchAsset(); }, [fetchAsset]);
+
+  /* Signature and attachment links are signed for 10 minutes: reload quietly before they expire */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      assetApi.get(assetId).then((a) => setLoad({ status: "ready", asset: a })).catch(() => {});
+    }, 9 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [assetId]);
 
   /* Runs one action. Resolves true when it succeeded, so the dialog can close; on failure the
      dialog stays open with what was entered. A conflict means the asset changed meanwhile. */
@@ -66,6 +74,8 @@ export function AssetDetailPage({ ctx, assetId, reqs, auditLog, notify, onChange
       onAccept={() => act(() => assetApi.accept(a.id), "Receipt confirmed")}
       onReturn={(d) => act(() => assetApi.recordReturn(a.id, d), d.missing.length ? "Return recorded with missing items" : "Return recorded")}
       onAddAccessory={(acc) => act(() => assetApi.addAccessory(a.id, acc), "Accessory added")}
-      onDispose={(reason, scrap) => act(() => assetApi.dispose(a.id, reason, scrap), "Asset written off")} />
+      onDispose={(reason, scrap) => act(() => assetApi.dispose(a.id, reason, scrap), "Asset written off")}
+      onAttach={(file, d) => act(() => assetApi.attach(a.id, file, d), "Attachment added")}
+      onRemoveAttachment={(attachmentId) => act(() => assetApi.removeAttachment(a.id, attachmentId), "Attachment removed")} />
   );
 }

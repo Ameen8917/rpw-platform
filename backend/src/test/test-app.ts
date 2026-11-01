@@ -2,6 +2,7 @@ import request from "supertest";
 import type { Sequelize } from "sequelize";
 import { createApp, type AppDeps } from "../app.js";
 import { createAssetService } from "../modules/assets/assets.service.js";
+import { createAttachmentService } from "../modules/assets/attachments.service.js";
 import { createCustodyService } from "../modules/assets/custody.service.js";
 import { createAuditService } from "../modules/audit/audit.service.js";
 import { createFilesService } from "../modules/files/files.service.js";
@@ -25,6 +26,7 @@ export function createTestApp(sequelize: Sequelize, overrides: Partial<AppDeps> 
     org: createOrgService(),
     assets,
     custody: createCustodyService({ assets, files }),
+    attachments: createAttachmentService({ assets, files }),
     audit: createAuditService(),
     invoices: createInvoiceService({ reader: null, hourlyLimit: 30 }),
     cookie: { secure: false },

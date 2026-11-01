@@ -4,7 +4,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { EnvError, loadEnv } from "../config/env.js";
-import { decodeSignature } from "../modules/files/files.service.js";
+import { ATTACHMENT_MAX_BYTES, ATTACHMENT_TYPES, decodeSignature } from "../modules/files/files.service.js";
 import { createSupabaseStorage } from "../modules/files/storage.js";
 
 /* 1×1 transparent PNG */
@@ -27,6 +27,15 @@ async function main() {
   const info = (await res.json()) as { public: boolean; file_size_limit: number | null; allowed_mime_types: string[] | null };
   if (info.public) throw new Error(`Bucket "${bucket}" is PUBLIC: anyone with a file path could read signatures. Make it private.`);
   console.log(`  bucket       exists, private`);
+  /* Bucket restrictions that would refuse attachments the API accepts */
+  const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
+  if (info.file_size_limit && info.file_size_limit < ATTACHMENT_MAX_BYTES) {
+    console.warn(`  WARNING      bucket file size limit is ${mb(info.file_size_limit)}; attachments can be up to ${mb(ATTACHMENT_MAX_BYTES)}. Raise it or remove the limit.`);
+  }
+  const missingTypes = info.allowed_mime_types?.length ? ATTACHMENT_TYPES.filter((t) => !info.allowed_mime_types!.includes(t)) : [];
+  if (missingTypes.length) {
+    console.warn(`  WARNING      bucket does not allow ${missingTypes.join(", ")}; attachments of that type will fail. Add them or clear the list.`);
+  }
 
   const storage = createSupabaseStorage({ url, serviceKey: key, bucket });
   const path = `healthcheck/${randomUUID()}.png`;

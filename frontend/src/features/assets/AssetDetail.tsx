@@ -8,13 +8,14 @@ import { CUSTODY_LABEL, accessoryCode, custodyState, depreciation } from "../../
 import { LIMITS, RESIDUAL_PCT } from "../../domain/config";
 import { AssetBadge, SourceTag } from "./AssetBadges";
 import { LabelModal } from "./AssetLabel";
+import { AttachmentsCard } from "./AttachmentsCard";
 import { AcceptModal, AccessoryModal, DisposeModal, IssueModal, ReturnModal } from "./modals";
 import { ApprovalBox } from "../requisitions/RequisitionBits";
 import { fmtDate, inrFull, inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
 /* Action handlers return a promise of success (the API call); dialogs close only when it succeeded */
-export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory, onIssue, onReturn, onAccept }) {
+export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory, onIssue, onReturn, onAccept, onAttach, onRemoveAttachment }) {
   const { user, perm, D, F, DEP, U, go } = ctx;
   const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -223,6 +224,8 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
           </Card>
         );
       })()}
+
+      <AttachmentsCard a={a} U={U} canEdit={!!perm.canAddExisting} onAdd={onAttach} onRemove={onRemoveAttachment} />
 
       {(() => {
         const dep = a.depreciation !== undefined ? a.depreciation : depreciation(a);

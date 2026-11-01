@@ -116,6 +116,24 @@ export class AssetAccessory extends Model<InferAttributes<AssetAccessory>, Infer
   declare createdAt: CreationOptional<Date>;
 }
 
+export const ATTACHMENT_KINDS = ["invoice", "photo", "document"] as const;
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
+
+/** A file kept with an asset. Removing it only hides it: removedBy/removedAt are set. */
+export class AssetAttachment extends Model<InferAttributes<AssetAttachment>, InferCreationAttributes<AssetAttachment>> {
+  declare id: CreationOptional<string>;
+  declare assetId: string;
+  declare fileId: string;
+  declare kind: AttachmentKind;
+  declare caption: string;
+  declare addedBy: string;
+  declare addedAt: CreationOptional<Date>;
+  declare removedBy: CreationOptional<string | null>;
+  declare removedAt: CreationOptional<Date | null>;
+
+  declare file?: NonAttribute<StoredFile>;
+}
+
 export class AssetCodeSequence extends Model<InferAttributes<AssetCodeSequence>, InferCreationAttributes<AssetCodeSequence>> {
   declare prefix: string;
   declare lastValue: number;
@@ -217,7 +235,20 @@ export function initAssetModels(sequelize: Sequelize) {
     recordedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   }, { sequelize, tableName: "asset_procurements", timestamps: false });
 
+  AssetAttachment.init({
+    id: uuid(),
+    assetId: { type: DataTypes.UUID, allowNull: false },
+    fileId: { type: DataTypes.UUID, allowNull: false },
+    kind: { type: DataTypes.STRING(10), allowNull: false },
+    caption: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    addedBy: { type: DataTypes.STRING(40), allowNull: false },
+    addedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    removedBy: userRef(),
+    removedAt: { type: DataTypes.DATE },
+  }, { sequelize, tableName: "asset_attachments", timestamps: false });
+
   Asset.hasOne(AssetDisposal, { foreignKey: "assetId", as: "disposal" });
+  AssetAttachment.belongsTo(StoredFile, { foreignKey: "fileId", as: "file" });
   Asset.hasMany(AssetAccessory, { foreignKey: "assetId", as: "accessories" });
   Asset.belongsTo(CustodyEvent, { foreignKey: "custodyEventId", as: "custodyEvent", constraints: false });
   Asset.belongsTo(CustodyEvent, { foreignKey: "acceptanceEventId", as: "acceptanceEvent", constraints: false });

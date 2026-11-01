@@ -4,6 +4,7 @@ import { describeDatabaseUrl, EnvError, loadEnv } from "./config/env.js";
 import { initModels } from "./db/models.js";
 import { createSequelize } from "./db/sequelize.js";
 import { createAssetService } from "./modules/assets/assets.service.js";
+import { createAttachmentService } from "./modules/assets/attachments.service.js";
 import { createCustodyService } from "./modules/assets/custody.service.js";
 import { createAuditService } from "./modules/audit/audit.service.js";
 import { createFilesService } from "./modules/files/files.service.js";
@@ -29,7 +30,7 @@ async function main() {
   const storage = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
     ? createSupabaseStorage({ url: env.SUPABASE_URL, serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, bucket: env.SUPABASE_STORAGE_BUCKET })
     : createUnconfiguredStorage();
-  if (!env.SUPABASE_URL) console.warn("Supabase Storage is not configured: saving signatures will answer 503 (docs/supabase-setup.md).");
+  if (!env.SUPABASE_URL) console.warn("Supabase Storage is not configured: saving signatures and attachments will answer 503 (docs/supabase-setup.md).");
   const files = createFilesService({ storage, bucket: env.SUPABASE_STORAGE_BUCKET });
   const assets = createAssetService({ files });
   const invoiceReader = env.ANTHROPIC_API_KEY ? createClaudeInvoiceReader({ apiKey: env.ANTHROPIC_API_KEY, model: env.INVOICE_AI_MODEL }) : null;
@@ -44,6 +45,7 @@ async function main() {
     org: createOrgService(),
     assets,
     custody: createCustodyService({ assets, files }),
+    attachments: createAttachmentService({ assets, files }),
     audit: createAuditService(),
     invoices: createInvoiceService({ reader: invoiceReader, hourlyLimit: env.INVOICE_AI_HOURLY_LIMIT }),
     cookie: { secure: env.NODE_ENV === "production" },

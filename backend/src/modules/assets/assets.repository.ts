@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes, where, type CreationAttributes, type Includeable, type Transaction, type WhereOptions } from "sequelize";
 import { StoredFile } from "../files/files.models.js";
 import type { AssetScope, AssetSource, AssetStatus } from "./asset-rules.js";
-import { Asset, AssetAccessory, AssetCodeSequence, AssetDisposal, AssetProcurement, CustodyEvent } from "./assets.models.js";
+import { Asset, AssetAccessory, AssetAttachment, AssetCodeSequence, AssetDisposal, AssetProcurement, CustodyEvent } from "./assets.models.js";
 
 export interface AssetFilter {
   scope: AssetScope;
@@ -118,6 +118,28 @@ export const assetRepository = {
     await AssetDisposal.create(d, { transaction });
     await asset.update({ status: "disposed" }, { transaction });
   },
+
+  /* Attachments still shown on the asset, oldest first, with their file (for the Storage path) */
+  attachmentsOf: (assetId: string, transaction?: Transaction) =>
+    AssetAttachment.findAll({
+      where: { assetId, removedAt: null },
+      include: [{ model: StoredFile, as: "file", attributes: ["id", "path", "contentType", "sizeBytes", "fileName"] }],
+      order: [["addedAt", "ASC"], ["id", "ASC"]],
+      transaction,
+    }),
+
+  findAttachment: (assetId: string, id: string, transaction: Transaction) =>
+    AssetAttachment.findOne({
+      where: { id, assetId },
+      include: [{ model: StoredFile, as: "file", attributes: ["id", "fileName"] }],
+      transaction,
+    }),
+
+  addAttachment: (x: CreationAttributes<AssetAttachment>, transaction: Transaction) => AssetAttachment.create(x, { transaction }),
+
+  /* Hides it from the asset; the row and the file stay */
+  removeAttachment: (x: AssetAttachment, removedBy: string, transaction: Transaction) =>
+    x.update({ removedBy, removedAt: new Date() }, { transaction }),
 
   /* Assets already carrying this requisition reference (including seeded ones) */
   countByReqRef: (reqRef: string, transaction: Transaction) => Asset.count({ where: { reqRef }, transaction }),

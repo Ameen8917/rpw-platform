@@ -6,7 +6,7 @@ import type { AuthContext } from "../auth/auth.service.js";
 import type { FilesService } from "../files/files.service.js";
 import { orgRepository, type OrgRepository } from "../org/org.repository.js";
 import { assetCode, assetCodePrefix, assetScope, depreciation, inrFull, inScope, todayIST, type AssetSource, type AssetStatus } from "./asset-rules.js";
-import { signaturePaths, toAssetDto, toCustodyEventDto, type AssetDetailDto } from "./assets.dto.js";
+import { signaturePaths, toAssetDto, toAttachmentDto, toCustodyEventDto, type AssetDetailDto } from "./assets.dto.js";
 import type { Asset } from "./assets.models.js";
 import { assetRepository, type AssetRepository } from "./assets.repository.js";
 import type { AccessoryInput, CreateAssetInput, DisposeInput, ProcuredInput } from "./assets.schemas.js";
@@ -15,7 +15,7 @@ export interface AssetServiceOptions {
   assetRepo?: AssetRepository;
   orgRepo?: OrgRepository;
   auditRepo?: AuditRepository;
-  /** Signs signature image URLs in detail responses; without it they are null */
+  /** Signs signature and attachment URLs in detail responses; without it they are null */
   files?: Pick<FilesService, "signedUrls">;
   now?: () => Date;
 }
@@ -116,14 +116,15 @@ export function createAssetService(opts: AssetServiceOptions = {}) {
   /* `a` must be loaded with findById / findByCode / findByTagId (custody history included) */
   async function detail(a: Asset): Promise<AssetDetailDto> {
     const refs = a.reqRef ? [a.code, a.reqRef] : [a.code];
-    const [activity, urls] = await Promise.all([
-      auditRepo.list({ refs, limit: 100 }),
-      opts.files ? opts.files.signedUrls(signaturePaths(a)) : Promise.resolve(new Map<string, string>()),
-    ]);
+    const [activity, attachments] = await Promise.all([auditRepo.list({ refs, limit: 100 }), assetRepo.attachmentsOf(a.id)]);
+    /* One signing request for every file the page shows */
+    const paths = [...signaturePaths(a), ...attachments.map((x) => x.file!.path)];
+    const urls = opts.files && paths.length ? await opts.files.signedUrls(paths) : new Map<string, string>();
     return {
       ...toAssetDto(a, today(), urls),
       custodyHistory: (a.custodyHistory ?? []).map((e) => toCustodyEventDto(e, urls)),
       activity: activity.map(toAuditEntryDto),
+      attachments: attachments.map((x) => toAttachmentDto(x, urls)),
     };
   }
 

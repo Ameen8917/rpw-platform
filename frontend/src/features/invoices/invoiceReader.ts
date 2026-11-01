@@ -52,13 +52,20 @@ export function useInvoiceReading(): InvoiceReadingStatus | null {
 
 /* Phone photos are often several MB; Claude reads at about 1,600 px anyway, so large images are
    scaled down to JPEG before upload. PDFs and small images go as they are. */
-const MAX_EDGE = 2000;
 export async function prepareInvoiceFile(file: File, status: InvoiceReadingStatus): Promise<Blob> {
+  return shrinkImage(file, status.maxImageBytes * 0.9);
+}
+
+/* Re-encodes an image as JPEG, at most `maxEdge` px on its longer side, when it is too big or
+   `force` is set (a type the server does not take). Anything else, or an image the browser
+   cannot decode, comes back unchanged. */
+const MAX_EDGE = 2000;
+export async function shrinkImage(file: Blob, maxBytes: number, opts: { maxEdge?: number; force?: boolean } = {}): Promise<Blob> {
   if (!file.type.startsWith("image/") || typeof createImageBitmap === "undefined") return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-  if (scale === 1 && file.size <= status.maxImageBytes * 0.9) { bitmap.close(); return file; }
+  const scale = Math.min(1, (opts.maxEdge ?? MAX_EDGE) / Math.max(bitmap.width, bitmap.height));
+  if (scale === 1 && file.size <= maxBytes && !opts.force) { bitmap.close(); return file; }
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);

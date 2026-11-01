@@ -1,5 +1,5 @@
 import { api } from "../../lib/api";
-import type { Asset, Department, Dealership, Facility, InvoiceDoc, Requisition, User } from "../../types";
+import type { Asset, AttachmentKind, Department, Dealership, Facility, InvoiceDoc, Requisition, User } from "../../types";
 
 /* Asset Management and the reference data it needs, read and written through the API.
    The request bodies here are the backend's Zod contracts (docs/asset-management.md, section 6). */
@@ -60,14 +60,21 @@ export const assetApi = {
     api.post<Asset>(`/assets/${id(assetId)}/dispose`, {
       reason, scrapValue: scrap === "" || scrap === null || scrap === undefined ? null : Number(scrap),
     }),
+  /* The file is the request body; what it is goes in the query string */
+  attach: (assetId: string, file: Blob, d: { kind: AttachmentKind; name: string; caption?: string }) =>
+    api.upload<Asset>(`/assets/${id(assetId)}/attachments?${new URLSearchParams({
+      kind: d.kind, name: d.name.slice(0, 200) || "file", ...(d.caption?.trim() ? { caption: d.caption.trim().slice(0, 200) } : {}),
+    })}`, file),
+  removeAttachment: (assetId: string, attachmentId: string) =>
+    api.post<Asset>(`/assets/${id(assetId)}/attachments/${id(attachmentId)}/remove`),
 };
 
 /* "Charger, Screen guard" → ["Charger", "Screen guard"] */
 export const bundledNames = (text: string | null | undefined) =>
   String(text || "").split(",").map((t) => t.trim()).filter(Boolean);
 
-/* The invoice reader also returns the file (a local object URL) and its line items. Only the
-   details are sent; attaching the file itself is not built yet. */
+/* The invoice reader also returns the file (a local data URL) and its line items. Only the
+   details go with the asset; the file itself is uploaded afterwards as an attachment. */
 export function invoiceDetails(doc: InvoiceDoc | null | undefined): InvoiceDoc | null {
   if (!doc) return null;
   const out: InvoiceDoc = {};

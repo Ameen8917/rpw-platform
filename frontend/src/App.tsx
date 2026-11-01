@@ -11,6 +11,7 @@ import type { Permissions } from "./domain/permissions";
 import { escalation, reqStatus, stageApprover, variance } from "./domain/requisitions";
 import { AdminConsole } from "./features/admin/AdminConsole";
 import { assetApi, orgApi, toCreateBody, toProcuredBody } from "./features/assets/api";
+import { attachmentName, prepareAttachment } from "./features/assets/attachments";
 import { AssetDetailPage } from "./features/assets/AssetDetailPage";
 import { AssetList } from "./features/assets/AssetList";
 import { CustodyView } from "./features/assets/CustodyView";
@@ -30,7 +31,7 @@ import { RoleSwitcher } from "./features/shell/RoleSwitcher";
 import { useHashRoute } from "./features/shell/route";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
 import { Brand, NavList, ScopeNote } from "./features/shell/Sidebar";
-import { errorMessage } from "./lib/api";
+import { ApiError, errorMessage } from "./lib/api";
 import { TODAY, fmtDate, inrFull } from "./lib/format";
 import { T } from "./theme";
 
@@ -351,14 +352,26 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
           }} />}
           {view === "assets" && <AssetList ctx={ctx} assets={visibleAssets} />}
           {view === "assetdetail" && <AssetDetailPage key={sel} ctx={ctx} assetId={sel} reqs={reqs} auditLog={auditLog} notify={notify} onChanged={upsertAsset} />}
-          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={async (draft) => {
+          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={async (draft, invoiceFile: File | null) => {
+            let created: Asset;
             try {
-              const created = await assetApi.create(toCreateBody(draft));
-              upsertAsset(created);
-              notify("Existing asset added"); go("assetdetail", created.id);
+              created = await assetApi.create(toCreateBody(draft));
             } catch (err) {
               notify(errorMessage(err), "error");
+              return;
             }
+            /* The asset is saved either way; a failed upload can be redone from its Attachments */
+            try {
+              if (invoiceFile) {
+                const ready = await prepareAttachment(invoiceFile, "invoice");
+                created = await assetApi.attach(created.id, ready, { kind: "invoice", name: attachmentName(invoiceFile, ready) });
+              }
+              notify("Existing asset added");
+            } catch (err) {
+              notify(`Asset added, but the invoice file was not saved: ${err instanceof ApiError ? errorMessage(err) : (err as Error).message} Add it under Attachments.`, "error");
+            }
+            upsertAsset(created);
+            go("assetdetail", created.id);
           }} />}
           {view === "procurement" && <Procurement ctx={ctx} reqs={visibleReqs} assets={assets} />}
           {view === "escalations" && <Escalations ctx={ctx} reqs={perm.isDirector ? reqs : reqs} />}
