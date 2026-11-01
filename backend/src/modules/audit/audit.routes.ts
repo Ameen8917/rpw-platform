@@ -4,7 +4,7 @@ import { createAuditController } from "./audit.controller.js";
 import { listAuditQuery } from "./audit.schemas.js";
 import type { AuditService } from "./audit.service.js";
 
-/* GET /api/audit?ref=&limit= — Director and functional heads */
+/* GET /api/audit?ref=&q=&page=&pageSize= — Director and functional heads */
 export function auditRoutes(audit: AuditService, requireAuth: RequestHandler): Router {
   const c = createAuditController(audit);
   const router = Router();

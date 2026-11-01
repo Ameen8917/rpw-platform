@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { errorHandler, notFound } from "./middleware/error-handler.js";
 import { assetRoutes, custodyRoutes } from "./modules/assets/assets.routes.js";
 import type { AssetService } from "./modules/assets/assets.service.js";
+import type { AttachmentService } from "./modules/assets/attachments.service.js";
 import type { CustodyService } from "./modules/assets/custody.service.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
 import type { AuditService } from "./modules/audit/audit.service.js";
@@ -26,6 +27,7 @@ export interface AppDeps extends HealthDeps, AuthRouteOptions {
   org: OrgService;
   assets: AssetService;
   custody: CustodyService;
+  attachments: AttachmentService;
   audit: AuditService;
   invoices: InvoiceService;
   requisitions: RequisitionService;
@@ -45,7 +47,7 @@ export function createApp(deps: AppDeps) {
   app.use("/api/health", healthRoutes(deps));
   app.use("/api/auth", authRoutes(deps.auth, deps.org, signedIn, deps));
   app.use("/api/org", orgRoutes(deps.org, signedIn));
-  app.use("/api/assets", assetRoutes(deps.assets, deps.custody, signedIn));
+  app.use("/api/assets", assetRoutes(deps.assets, deps.custody, deps.attachments, signedIn));
   app.use("/api/custody", custodyRoutes(deps.custody, signedIn));
   app.use("/api/audit", auditRoutes(deps.audit, signedIn));
   app.use("/api/invoices", invoiceRoutes(deps.invoices, signedIn));

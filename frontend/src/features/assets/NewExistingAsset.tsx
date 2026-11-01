@@ -16,6 +16,8 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
   const fac = facilities.filter((x) => x.dealershipId === f.dealershipId && x.active);
   const [filled, setFilled] = useState({});   /* which fields came from the invoice */
   const [invoiceDoc, setInvoiceDoc] = useState(null);
+  /* The attached invoice itself, uploaded once the asset is saved */
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   /* The server numbers the code when it saves; the form shows the prefix it will use */
   const code = genAssetCode([], dealerships, f.dealershipId, f.category, f.purchaseDate || TODAY.toISOString()).replace(/d{4}$/, "····");
@@ -51,7 +53,7 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
       <button onClick={onCancel} className="-ml-1 flex items-center gap-0.5 rounded px-1 text-[13px] font-medium hover:underline" style={{ color: T.sub }}><ChevronLeft size={15} />Assets</button>
       <PageHead title="Add existing asset" sub="Opening stock — already owned, not procured through the platform" />
 
-      <InvoiceScanner onFill={applyItem} onAttach={setInvoiceDoc} />
+      <InvoiceScanner onFill={applyItem} onAttach={(m) => { setInvoiceDoc(m); setInvoiceFile(m.file ?? null); }} />
 
       <Card>
         <div className="mb-3 rounded-lg px-3 py-2 text-[12px]" style={{ background: T.slateBg, color: T.sub }}>
@@ -117,7 +119,7 @@ export function NewExistingAsset({ ctx, onCancel, onCreate }) {
           <Btn icon={Plus} disabled={!ok || busy} onClick={async () => {
             setBusy(true);
             try {
-              await onCreate({ ...f, assignedTo: f.assignedTo || null, invoiceDoc });
+              await onCreate({ ...f, assignedTo: f.assignedTo || null, invoiceDoc }, invoiceFile);
             } finally {
               setBusy(false);
             }

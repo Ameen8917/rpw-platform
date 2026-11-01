@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { HttpError } from "../../lib/http-error.js";
 import { TINY_PNG } from "../../test/fixtures.js";
-import { createFilesService, decodeSignature, SIGNATURE_MAX_BYTES } from "./files.service.js";
+import { ATTACHMENT_MAX_BYTES, checkAttachment, createFilesService, decodeSignature, SIGNATURE_MAX_BYTES } from "./files.service.js";
 import { createMemoryStorage, createSupabaseStorage, createUnconfiguredStorage, StorageError } from "./storage.js";
 
 
@@ -87,7 +87,7 @@ describe("signature images", () => {
     expect(storage.objects.size).toBe(0);
   });
 
-  it("still serves pages when Storage cannot sign URLs", async () => {
+  it("still serves pages when Storage cannot sign URLs (signatures and attachments alike)", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const files = createFilesService({
       bucket: "b",
@@ -95,5 +95,48 @@ describe("signature images", () => {
     });
     expect((await files.signedUrls(["a.png"])).size).toBe(0);
     spy.mockRestore();
+  });
+});
+
+describe("attachments", () => {
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+  const PDF = Buffer.from("%PDF-1.7\n%\xe2\xe3\n");
+  const PNG = decodeSignature(TINY_PNG);
+  const rejects = (bytes: unknown, kind: "invoice" | "photo" | "document", message: RegExp) => {
+    const err = (() => { try { checkAttachment(bytes, kind); } catch (e) { return e; } })() as HttpError;
+    expect(err).toBeInstanceOf(HttpError);
+    expect(err.status).toBe(400);
+    expect((err.details as { message: string }[])[0].message).toMatch(message);
+  };
+
+  it("accepts images and PDFs by their content", () => {
+    expect(checkAttachment(JPEG, "photo")).toBe("image/jpeg");
+    expect(checkAttachment(PNG, "invoice")).toBe("image/png");
+    expect(checkAttachment(PDF, "document")).toBe("application/pdf");
+  });
+
+  it("refuses empty bodies, other types, oversized files and PDFs as photos", () => {
+    rejects(Buffer.alloc(0), "photo", /request body/);
+    rejects({ some: "json" }, "photo", /request body/);
+    rejects(Buffer.from("<html>"), "document", /Only JPEG, PNG, WebP/);
+    rejects(Buffer.from("GIF89a"), "photo", /Only JPEG, PNG, WebP/);
+    rejects(Buffer.concat([JPEG, Buffer.alloc(ATTACHMENT_MAX_BYTES)]), "photo", /too large \(limit 4 MB\)/);
+    rejects(PDF, "photo", /must be an image/);
+  });
+
+  it("stores under its real type with our own name, keeping the original as a label", async () => {
+    const storage = createMemoryStorage();
+    const files = createFilesService({ storage, bucket: "rpw-files", now: () => new Date("2026-11-01T10:00:00Z") });
+    const up = await files.storeAttachment(PDF, "invoice", "Dell invoice.pdf");
+    expect(up.path).toMatch(/^attachments\/2026\/11\/[0-9a-f-]{36}\.pdf$/);
+    expect(up).toMatchObject({ contentType: "application/pdf", purpose: "invoice", fileName: "Dell invoice.pdf", sizeBytes: PDF.length });
+    expect(storage.objects.get(up.path)?.contentType).toBe("application/pdf");
+  });
+
+  it("uploads nothing when the file is refused", async () => {
+    const storage = createMemoryStorage();
+    const files = createFilesService({ storage, bucket: "b" });
+    await expect(files.storeAttachment(Buffer.from("not a file"), "document", "x.txt")).rejects.toBeInstanceOf(HttpError);
+    expect(storage.objects.size).toBe(0);
   });
 });

@@ -212,8 +212,43 @@ describe.skipIf(!env)("assets API (test database)", () => {
       expect((await get(IT_MANAGER, "/api/audit")).status).toBe(403);
       const res = await get(IT_HEAD, `/api/audit?ref=${encodeURIComponent("RPW/JNS/IT/26-27/0002")}`);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual([expect.objectContaining({ actorId: "U_SUNIL", action: "Added existing asset" })]);
-      expect((await get(DIRECTOR, "/api/audit?limit=3")).body).toHaveLength(3);
+      expect(res.body).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+      expect(res.body.entries).toEqual([expect.objectContaining({ actorId: "U_SUNIL", action: "Added existing asset" })]);
+    });
+
+    it("pages through the whole trail, newest first, without repeats", async () => {
+      const first = (await get(DIRECTOR, "/api/audit?pageSize=3")).body;
+      const second = (await get(DIRECTOR, "/api/audit?pageSize=3&page=2")).body;
+      expect(first.entries).toHaveLength(3);
+      expect(second).toMatchObject({ page: 2, pageSize: 3, total: first.total });
+      expect(first.total).toBeGreaterThan(6);
+      const ids = [...first.entries, ...second.entries].map((e: { id: string }) => e.id);
+      expect(new Set(ids).size).toBe(6);
+      const times = [...first.entries, ...second.entries].map((e: { at: string }) => e.at);
+      expect([...times].sort().reverse()).toEqual(times);
+
+      const past = (await get(DIRECTOR, `/api/audit?pageSize=3&page=${Math.ceil(first.total / 3) + 1}`)).body;
+      expect(past).toMatchObject({ entries: [], total: first.total });
+    });
+
+    it("searches the whole trail by action, reference, detail and the person's name", async () => {
+      const byName = (await get(DIRECTOR, "/api/audit?q=sunil&pageSize=100")).body;
+      expect(byName.total).toBeGreaterThan(0);
+      expect(byName.entries.every((e: { actorId: string; action: string; ref: string; detail: string }) =>
+        e.actorId === "U_SUNIL" || /sunil/i.test(e.action + e.ref + e.detail))).toBe(true);
+
+      const byAction = (await get(DIRECTOR, "/api/audit?q=added%20existing")).body;
+      expect(byAction.total).toBeGreaterThan(0);
+      expect(byAction.entries.every((e: { action: string }) => /added existing/i.test(e.action))).toBe(true);
+
+      /* % and _ are matched literally, not as wildcards */
+      expect((await get(DIRECTOR, "/api/audit?q=%25%25%25")).body).toMatchObject({ entries: [], total: 0 });
+    });
+
+    it("rejects bad paging values and the old limit parameter", async () => {
+      for (const q of ["page=0", "page=x", "pageSize=101", "pageSize=0", "limit=3"]) {
+        expect((await get(DIRECTOR, `/api/audit?${q}`)).status).toBe(400);
+      }
     });
 
     it("cannot be changed or deleted, even directly in the database", async () => {

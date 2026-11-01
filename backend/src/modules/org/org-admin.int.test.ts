@@ -47,7 +47,7 @@ describe.skipIf(!env)("Admin console and group settings (test database)", () => 
       expect((await send("post", IT_HEAD, "/api/org/dealerships", body)).status).toBe(409);
       expect((await send("post", IT_HEAD, "/api/org/dealerships", { ...body, short: "TMY", code: "TMY-01", headId: "U_ANI" })).body.error.details[0].path).toBe("headId");
       expect((await get(HR_MANAGER, "/api/audit")).status).toBe(403);
-      expect((await get(DIRECTOR, "/api/audit?ref=TMX-01")).body[0]).toMatchObject({ actorId: "U_SUNIL", action: "Created dealership", detail: "Test Motors · Test" });
+      expect((await get(DIRECTOR, "/api/audit?ref=TMX-01")).body.entries[0]).toMatchObject({ actorId: "U_SUNIL", action: "Created dealership", detail: "Test Motors · Test" });
     });
 
     it("adds and deactivates a location", async () => {
@@ -105,7 +105,7 @@ describe.skipIf(!env)("Admin console and group settings (test database)", () => 
     it("changes role, scope and approval limit", async () => {
       const res = await send("patch", IT_HEAD, `/api/org/users/${leaverId}`, { role: "functional_head", deptId: "DEP_ADM", dealershipIds: ["D_TMX", "D_MTB"], approvalLimit: 25000 });
       expect(res.body).toMatchObject({ role: "functional_head", dealershipIds: ["D_MTB", "D_TMX"], approvalLimit: 25000 });
-      expect((await get(DIRECTOR, "/api/audit?ref=TMX-EMP-001")).body[0]).toMatchObject({
+      expect((await get(DIRECTOR, "/api/audit?ref=TMX-EMP-001")).body.entries[0]).toMatchObject({
         action: "Changed authority", detail: "Test Leaver → Corporate functional head · limit ₹25,000",
       });
     });
@@ -136,7 +136,7 @@ describe.skipIf(!env)("Admin console and group settings (test database)", () => 
       expect((await send("put", IT_HEAD, "/api/settings", { ...LIMIT_DEFAULTS, slaDays: 0 })).status).toBe(400);
       const res = await send("put", IT_HEAD, "/api/settings", { ...LIMIT_DEFAULTS, capitalisation: 10000 });
       expect(res.body.capitalisation).toBe(10000);
-      expect((await get(DIRECTOR, "/api/audit?ref=group")).body[0]).toMatchObject({ actorId: "U_SUNIL", action: "Updated authority rules" });
+      expect((await get(DIRECTOR, "/api/audit?ref=group")).body.entries[0]).toMatchObject({ actorId: "U_SUNIL", action: "Updated authority rules" });
     });
 
     it("move the capitalisation floor for accessories", async () => {

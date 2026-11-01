@@ -1,4 +1,5 @@
-import { col, fn, where, type CreationAttributes, type Transaction } from "sequelize";
+import { col, fn, Op, where, type CreationAttributes, type Transaction } from "sequelize";
+import { containsPattern } from "../../lib/like.js";
 import { Department, Dealership, Facility, User, UserDealership } from "./org.models.js";
 
 const withDealershipIds = () => ({ model: Dealership, as: "dealerships", attributes: ["id"], through: { attributes: [] } });
@@ -16,6 +17,12 @@ export const orgRepository = {
   findFacilityById: (id: string, transaction?: Transaction) => Facility.findByPk(id, { transaction }),
   findDepartmentById: (id: string, transaction?: Transaction) => Department.findByPk(id, { transaction }),
   findUserById: (id: string, transaction?: Transaction) => User.findByPk(id, { include: [withDealershipIds()], transaction }),
+
+  /* IDs of people whose name contains the text (audit search by actor) */
+  async findUserIdsByName(text: string): Promise<string[]> {
+    const rows = await User.findAll({ where: { name: { [Op.iLike]: containsPattern(text) } }, attributes: ["id"] });
+    return rows.map((u) => u.id);
+  },
 
   /* Exact match, case-insensitive (people type "rpw-emp-0001" too). Not ILIKE: a typed % or _
      would act as a wildcard and could match someone else's code. */

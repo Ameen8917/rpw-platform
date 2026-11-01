@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../../app.js";
 import type { AssetService } from "../assets/assets.service.js";
+import type { AttachmentService } from "../assets/attachments.service.js";
 import type { CustodyService } from "../assets/custody.service.js";
 import type { AuditService } from "../audit/audit.service.js";
 import type { AuthContext, AuthService } from "../auth/auth.service.js";
@@ -39,7 +40,8 @@ function appWith(reader: InvoiceReader | null, hourlyLimit = 30) {
   return createApp({
     corsOrigin: "http://localhost:5173", checkDatabase: async () => {},
     auth: { resolve: async (token: string) => people[token] ?? null } as unknown as AuthService,
-    org: {} as OrgService, assets: {} as AssetService, custody: {} as CustodyService, audit: {} as AuditService,
+    org: {} as OrgService, assets: {} as AssetService, custody: {} as CustodyService,
+    attachments: {} as AttachmentService, audit: {} as AuditService,
     invoices: createInvoiceService({ reader, hourlyLimit }),
     requisitions: {} as RequisitionService, settings: {} as SettingsService,
     cookie: { secure: false }, devLoginEnabled: false,

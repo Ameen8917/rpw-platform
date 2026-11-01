@@ -25,17 +25,19 @@ export function SignaturePad({ onChange }) {
     const c = ref.current; c.getContext("2d").clearRect(0, 0, c.width, c.height);
     setEmpty(true); onChange(null);
   }
+  /* Inside a <label> (Field), a click on the canvas would be passed to the Clear button and wipe the signature */
   return (
     <div>
       <div className="relative rounded-lg" style={{ border: "1px dashed " + T.line, background: "#fff" }}>
         <canvas ref={ref} width={520} height={160} style={{ width: "100%", height: 130, touchAction: "none", display: "block" }}
+          onClick={(e) => e.preventDefault()}
           onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
           onTouchStart={start} onTouchMove={move} onTouchEnd={end} />
         {empty && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm" style={{ color: T.sub }}>
           Sign here with a finger or mouse
         </div>}
       </div>
-      <button onClick={clear} className="mt-1 text-[11px] font-semibold" style={{ color: T.primary }}>Clear signature</button>
+      <button type="button" onClick={clear} className="mt-1 text-[11px] font-semibold" style={{ color: T.primary }}>Clear signature</button>
     </div>
   );
 }

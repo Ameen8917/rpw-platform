@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app.js";
 import type { AssetService } from "./modules/assets/assets.service.js";
+import type { AttachmentService } from "./modules/assets/attachments.service.js";
 import type { CustodyService } from "./modules/assets/custody.service.js";
 import type { AuditService } from "./modules/audit/audit.service.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
@@ -22,6 +23,7 @@ const appWith = (checkDatabase: () => Promise<unknown>) =>
     org: {} as OrgService,
     assets: {} as AssetService,
     custody: {} as CustodyService,
+    attachments: {} as AttachmentService,
     audit: {} as AuditService,
     invoices: {} as InvoiceService,
     requisitions: {} as RequisitionService,

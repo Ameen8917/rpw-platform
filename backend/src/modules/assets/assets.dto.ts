@@ -1,13 +1,13 @@
 import type { AuditEntryDto } from "../audit/audit.dto.js";
 import { depreciation, todayIST, type AssetCategory, type AssetSource, type AssetStatus } from "./asset-rules.js";
-import type { Asset, AssetAccessory, AssetDisposal, CustodyEvent, InvoiceDoc, ReturnCondition } from "./assets.models.js";
+import type { Asset, AssetAccessory, AssetAttachment, AssetDisposal, AttachmentKind, CustodyEvent, InvoiceDoc, ReturnCondition } from "./assets.models.js";
 
 /* API shapes. They match Asset / Accessory in frontend/src/types/index.ts, except that
    purchaseDate is null (not "") when unknown, computed depreciation and the disposal record
    are included, and signature fields are short-lived URLs (in detail and lookup responses;
    null in lists). */
 
-/** Signed URL per Storage path, for signature images */
+/** Signed URL per Storage path, for signature images and attachments */
 export type SignedUrls = Map<string, string>;
 
 export interface AccessoryDto {
@@ -92,11 +92,35 @@ export interface AssetDto {
   depreciation: ReturnType<typeof depreciation>;
 }
 
+export interface AttachmentDto {
+  id: string;
+  kind: AttachmentKind;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  caption: string;
+  addedBy: string;
+  addedAt: string;
+  /** Signed link, valid for 10 minutes; null if Storage could not sign it */
+  url: string | null;
+}
+
 export interface AssetDetailDto extends AssetDto {
   /** Every issue, acceptance and return, newest first */
   custodyHistory: CustodyEventDto[];
   /** Audit entries for this asset's code and its requisition, newest first */
   activity: AuditEntryDto[];
+  /** Invoices, photos and documents still shown on the asset, oldest first */
+  attachments: AttachmentDto[];
+}
+
+/** `x` must be loaded with its file (assetRepository.attachmentsOf) */
+export function toAttachmentDto(x: AssetAttachment, urls: SignedUrls): AttachmentDto {
+  const f = x.file!;
+  return {
+    id: x.id, kind: x.kind, fileName: f.fileName ?? "file", contentType: f.contentType, sizeBytes: f.sizeBytes,
+    caption: x.caption, addedBy: x.addedBy, addedAt: x.addedAt.toISOString(), url: urls.get(f.path) ?? null,
+  };
 }
 
 /** Storage paths of the signatures an asset response shows */

@@ -8,6 +8,7 @@ import { LIMITS } from "./domain/config";
 import type { Permissions } from "./domain/permissions";
 import { AdminConsole } from "./features/admin/AdminConsole";
 import { assetApi, orgApi, toCreateBody } from "./features/assets/api";
+import { attachmentName, prepareAttachment } from "./features/assets/attachments";
 import { AssetDetailPage } from "./features/assets/AssetDetailPage";
 import { AssetList } from "./features/assets/AssetList";
 import { CustodyView } from "./features/assets/CustodyView";
@@ -25,9 +26,10 @@ import { reqApi, settingsApi, toProcureBody, toRaiseBody, type StageDecision, ty
 import { Login } from "./features/shell/Login";
 import { NotificationBell } from "./features/shell/NotificationBell";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
+import { useHashRoute } from "./features/shell/route";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
 import { Brand, NavList, ScopeNote } from "./features/shell/Sidebar";
-import { errorMessage } from "./lib/api";
+import { ApiError, errorMessage } from "./lib/api";
 import { TODAY, fmtDate } from "./lib/format";
 import { T } from "./theme";
 
@@ -136,8 +138,8 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
   const { users, dealerships, facilities, departments } = org;
   const user = session.user;
   const perm: Permissions = session.permissions;
-  const [view, setView] = useState("dashboard");
-  const [sel, setSel] = useState(null);
+  const [route, navigate] = useHashRoute();
+  const sel = route.id;
   const [toast, setToast] = useState<Toast>(null);
   const [navOpen, setNavOpen] = useState(false);
 
@@ -150,7 +152,7 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
     setToast({ msg, kind });
     setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), kind === "error" ? 6000 : 2600);
   }
-  function go(v, id = null) { setView(v); setSel(id); setNavOpen(false); }
+  function go(v, id = null) { navigate({ view: v, id }); setNavOpen(false); }
   /* The server's answer replaces the asset in the register (or adds it) */
   function upsertAsset(a: Asset) {
     setAssets((as) => (as.some((x) => x.id === a.id) ? as.map((x) => (x.id === a.id ? a : x)) : [a, ...as]));
@@ -184,6 +186,9 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
     ...(perm.canSeeAudit ? [{ key: "audit", label: "Audit", icon: ShieldCheck }] : []),
     ...(perm.canAdminConsole ? [{ key: "admin", label: "Admin", icon: Settings }] : []),
   ];
+  /* A page from the URL this user may not open (or a requisition lost on reload, as they live in memory) shows the dashboard */
+  const known = [...NAV.map((n) => n.key), "reqdetail", "newreq", "assetdetail", "newasset"].includes(route.view);
+  const view = !known || (route.view === "reqdetail" && !reqs.some((x) => x.id === sel)) ? "dashboard" : route.view;
 
   /* -------- actions --------
      Each goes to the server, which checks who may take it and answers with the updated
@@ -292,14 +297,26 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
           {view === "newreq" && <NewReq ctx={ctx} onCancel={() => go("reqs")} onCreate={raise} />}
           {view === "assets" && <AssetList ctx={ctx} assets={visibleAssets} />}
           {view === "assetdetail" && <AssetDetailPage key={sel} ctx={ctx} assetId={sel} reqs={reqs} auditLog={[]} notify={notify} onChanged={upsertAsset} />}
-          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={async (draft) => {
+          {view === "newasset" && <NewExistingAsset ctx={ctx} onCancel={() => go("assets")} onCreate={async (draft, invoiceFile: File | null) => {
+            let created: Asset;
             try {
-              const created = await assetApi.create(toCreateBody(draft));
-              upsertAsset(created);
-              notify("Existing asset added"); go("assetdetail", created.id);
+              created = await assetApi.create(toCreateBody(draft));
             } catch (err) {
               notify(errorMessage(err), "error");
+              return;
             }
+            /* The asset is saved either way; a failed upload can be redone from its Attachments */
+            try {
+              if (invoiceFile) {
+                const ready = await prepareAttachment(invoiceFile, "invoice");
+                created = await assetApi.attach(created.id, ready, { kind: "invoice", name: attachmentName(invoiceFile, ready) });
+              }
+              notify("Existing asset added");
+            } catch (err) {
+              notify(`Asset added, but the invoice file was not saved: ${err instanceof ApiError ? errorMessage(err) : (err as Error).message} Add it under Attachments.`, "error");
+            }
+            upsertAsset(created);
+            go("assetdetail", created.id);
           }} />}
           {view === "procurement" && <Procurement ctx={ctx} reqs={visibleReqs} assets={assets} />}
           {view === "escalations" && <Escalations ctx={ctx} reqs={visibleReqs} />}

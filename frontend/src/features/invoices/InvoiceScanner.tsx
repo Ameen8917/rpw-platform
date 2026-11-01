@@ -27,7 +27,7 @@ function useAttachedInvoice() {
     const url = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
     const meta = { url, name: f.name, type: f.type };
     setFile(f); setDoc(meta); setErr(null);
-    onAttached({ fileName: f.name, fileUrl: url, fileType: f.type });
+    onAttached({ fileName: f.name, fileUrl: url, fileType: f.type, file: f });
   }
 
   async function read(): Promise<ExtractedInvoice | null> {
@@ -98,7 +98,7 @@ export function InvoiceScanner({ onFill, onAttach, compact }: { onFill: (item: a
     <Card className={compact ? "" : "mb-4"}>
       <SectionTitle icon={FileText}>Start from the invoice</SectionTitle>
       <p className="mt-1 text-[13px]" style={{ color: T.sub }}>
-        Photograph or upload the invoice to keep its details with the asset.
+        Photograph or upload the invoice: it is saved with the asset.
         {inv.status?.aiReading ? " You can let AI read it to fill the fields below." : ""} Anything not printed on it, you enter by hand.
       </p>
 

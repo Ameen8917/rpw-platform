@@ -92,7 +92,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
         advance: { required: true, amount: 9000, terms: "30% with order" },
         bh: { decision: null }, fn: { decision: null }, procurement: null, directorPurchaseRequired: false,
       });
-      const audit = (await get(DIRECTOR, `/api/audit?ref=${res.body.ref}`)).body;
+      const audit = (await get(DIRECTOR, `/api/audit?ref=${res.body.ref}`)).body.entries;
       expect(audit[0]).toMatchObject({ actorId: "U_KIR", action: "Raised requisition", detail: "MTB · Visitor chairs · est. ₹30,000" });
     });
 
@@ -149,7 +149,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
       const fn = await decide(ADMIN_HEAD, id, "fn");
       expect(fn.body).toMatchObject({ fn: { decision: "approved", by: "U_PARESH" }, directorPurchaseRequired: false });
       expect((await decide(DIRECTOR, id, "directorPurchase")).status).toBe(409);
-      const audit = (await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.map((e: { action: string }) => e.action);
+      const audit = (await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.entries.map((e: { action: string }) => e.action);
       expect(audit.slice(0, 2)).toEqual(["Approved requisition (functional)", "Approved requisition (business head)"]);
     });
 
@@ -171,7 +171,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
       expect(res.status).toBe(200);
       expect(res.body.fn).toMatchObject({ decision: "approved", by: "U_ARJ", onBehalfOf: "U_SILKI" });
       expect(res.body.fn.lateDays).toBeGreaterThanOrEqual(3);
-      expect((await get(DIRECTOR, "/api/audit?ref=REQ-2026-0033")).body[0].detail).toMatch(/Director acted in place of Silki Monga after \d+ days — Overdue$/);
+      expect((await get(DIRECTOR, "/api/audit?ref=REQ-2026-0033")).body.entries[0].detail).toMatch(/Director acted in place of Silki Monga after \d+ days — Overdue$/);
     });
 
     it("ends at a rejection; the raiser can revise it once", async () => {
@@ -216,7 +216,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ procurement: null, sentBack: { by: "U_PARESH", note: "Invoice says 5 chairs" } });
       expect((await get(DIRECTOR, `/api/assets/lookup?code=${encodeURIComponent(before[0])}`)).status).toBe(404);
-      expect((await get(DIRECTOR, `/api/audit?ref=${ref}`)).body[0]).toMatchObject({
+      expect((await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.entries[0]).toMatchObject({
         action: "Sent asset entry back", detail: `Invoice says 5 chairs · removed ${before[0]}`,
       });
     });
@@ -251,7 +251,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
       expect(paid.status).toBe(201);
       expect(paid.body.payments.balance).toMatchObject({ by: "U_SAR", amount: 31000, mode: "RTGS", ref: "UTR-5501" });
       expect((await post(MTB_EXEC, `/api/requisitions/${id}/payments/balance`, { amount: 1, mode: "NEFT", ref: "UTR-2" })).status).toBe(409);
-      expect((await get(DIRECTOR, `/api/audit?ref=${ref}`)).body[0]).toMatchObject({ action: "Paid balance", detail: "₹31,000 · RTGS · UTR-5501 · MTB" });
+      expect((await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.entries[0]).toMatchObject({ action: "Paid balance", detail: "₹31,000 · RTGS · UTR-5501 · MTB" });
     });
   });
 
@@ -284,7 +284,7 @@ describe.skipIf(!env)("requisitions, approvals, procurement and payments (test d
       const paid = await pay(60000);
       expect(paid.status).toBe(201);
       expect(paid.body.payments.advance).toMatchObject({ amount: 60000, by: "U_SAR" });
-      const actions = (await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.map((e: { action: string }) => e.action);
+      const actions = (await get(DIRECTOR, `/api/audit?ref=${ref}`)).body.entries.map((e: { action: string }) => e.action);
       expect(actions.slice(0, 5)).toEqual([
         "Paid vendor advance", "Approved advance (Director)", "Approved advance (GM Finance)", "Approved advance for payment", "Held advance",
       ]);

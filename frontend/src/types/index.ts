@@ -104,6 +104,22 @@ export interface InvoiceDoc {
   total?: number;
 }
 
+export type AttachmentKind = "invoice" | "photo" | "document";
+
+/** An invoice, photo or document kept with an asset (from the API, detail only) */
+export interface Attachment {
+  id: ID;
+  kind: AttachmentKind;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  caption: string;
+  addedBy: ID;
+  addedAt: ISODate;
+  /** Signed link, valid for 10 minutes; null if it could not be signed */
+  url: string | null;
+}
+
 /** Written off (from the API) */
 export interface Disposal {
   reason: string;
@@ -174,6 +190,8 @@ export interface Asset {
   custodyHistory?: CustodyEvent[];
   /** Detail only: audit entries for the asset and its requisition, newest first */
   activity?: AuditEntry[];
+  /** Detail only: invoices, photos and documents, oldest first */
+  attachments?: Attachment[];
 }
 
 /* --------------------------- Requisitions --------------------------------- */

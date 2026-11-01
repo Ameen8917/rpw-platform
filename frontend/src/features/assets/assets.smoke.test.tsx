@@ -32,11 +32,28 @@ describe("asset screens render with seed data", () => {
     expect(html).toContain("Reception Laptop");
   });
 
+  it("asset register pages the list, 10 at a time by default, but prints labels for all of it", () => {
+    const many = Array.from({ length: 60 }, (_, i) => ({ ...SEED_ASSETS[0], id: `a${i}`, code: `RPW-TEST-${String(i).padStart(4, "0")}` }));
+    const html = renderToString(<AssetList ctx={director} assets={many} />).replace(/<!-- -->/g, "");
+    expect(html).toContain("1–10</b> of 60 assets");
+    expect(html).toContain("Rows per page");
+    expect(html).toContain("RPW-TEST-0009");
+    expect(html).not.toContain("RPW-TEST-0010");
+    expect(html).toContain("Print 60 labels");
+  });
+
+  it("shows the pager even when everything fits on one page", () => {
+    const few = SEED_ASSETS.slice(0, 4);
+    const html = renderToString(<AssetList ctx={director} assets={few} />).replace(/<!-- -->/g, "");
+    expect(html).toContain("1–4</b> of 4 assets");
+    expect(html).toContain("Rows per page");
+  });
+
   it("detail of every asset, including issued ones (regression: `user` was undefined)", () => {
     for (const a of SEED_ASSETS) {
       const html = renderToString(
         <AssetDetail ctx={director} a={a} reqs={SEED_REQS} auditLog={SEED_AUDIT}
-          onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} />,
+          onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} onAttach={noop} onRemoveAttachment={noop} />,
       );
       expect(html).toContain(a.code);
     }
@@ -64,7 +81,7 @@ describe("asset detail with server data", () => {
       activity: [{ id: "e1", at: "2026-10-30T06:00:00.000Z", actorId: "U_SUJAY", action: "Disposed asset", ref: base.code, detail: "Beyond repair · scrap ₹1,500" }],
     };
     const html = renderToString(<AssetDetail ctx={ctxFor("U_SUJAY")} a={a} reqs={SEED_REQS} auditLog={[]}
-      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} />);
+      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} onAttach={noop} onRemoveAttachment={noop} />);
     expect(html).toContain("Written off on");
     expect(html).toContain("Book value ₹4,321");
     expect(html).toContain("Disposed asset");
@@ -74,7 +91,38 @@ describe("asset detail with server data", () => {
   it("asks for the return before an issued asset can be written off", () => {
     const issued = SEED_ASSETS.find((a) => a.assignedTo)!;
     const html = renderToString(<AssetDetail ctx={ctxFor("U_ARJ")} a={issued} reqs={SEED_REQS} auditLog={[]}
-      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} />);
+      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} onAttach={noop} onRemoveAttachment={noop} />);
     expect(html).toContain("record its return first");
+  });
+
+  it("lists attachments and the invoice details; only those who add assets may change them", () => {
+    const a = {
+      ...base,
+      invoiceDoc: { vendor: "Dell India", invoiceNo: "DI/2024/118", invoiceDate: "2024-07-15", total: 62000 },
+      attachments: [
+        { id: "x1", kind: "invoice" as const, fileName: "dell-invoice.pdf", contentType: "application/pdf", sizeBytes: 250 * 1024,
+          caption: "", addedBy: "U_SUNIL", addedAt: "2026-11-01T06:00:00.000Z", url: "https://storage.example/x1" },
+        { id: "x2", kind: "photo" as const, fileName: "front.jpg", contentType: "image/jpeg", sizeBytes: 900 * 1024,
+          caption: "Serial plate", addedBy: "U_SUNIL", addedAt: "2026-11-01T06:05:00.000Z", url: null },
+      ],
+    };
+    /* Without React's <!-- --> markers between adjacent text pieces */
+    const render = (userId: string) => renderToString(<AssetDetail ctx={ctxFor(userId)} a={a} reqs={SEED_REQS} auditLog={[]}
+      onDispose={noop} onAddAccessory={noop} onIssue={noop} onReturn={noop} onAccept={noop} onAttach={noop} onRemoveAttachment={noop} />)
+      .replace(/<!-- -->/g, "");
+
+    const head = render("U_SUNIL");
+    expect(head).toContain("Attachments (2)");
+    expect(head).toContain("Dell India · No. DI/2024/118");
+    expect(head).toContain("dell-invoice.pdf");
+    expect(head).toContain("Serial plate");
+    expect(head).toContain("link unavailable");
+    expect(head).toContain("Add photo / document");
+    expect(head).toContain("Remove front.jpg");
+
+    const manager = render("U_ANI");
+    expect(manager).toContain("dell-invoice.pdf");
+    expect(manager).not.toContain("Add photo / document");
+    expect(manager).not.toContain("Remove front.jpg");
   });
 });
