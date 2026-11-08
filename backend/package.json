@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:test-db": "tsx src/scripts/with-test-db.ts npm run dev",
+    "db:setup:test-db": "tsx src/scripts/with-test-db.ts \"npm run db:migrate && npm run db:seed\"",
+    "storage:check:test-db": "tsx src/scripts/with-test-db.ts npm run storage:check",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",

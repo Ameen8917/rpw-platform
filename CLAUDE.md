@@ -42,7 +42,7 @@ Layout of `frontend/src`:
 
 TypeScript runs with `strict: false` during migration. Tighten it module by module, starting with `domain/` and `features/assets/`.
 
-Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check[:test]` (read-only connection test), `npm run db:migrate[:status]`, `npm run storage:check` (Supabase Storage bucket round trip), `npm run db:seed` (prototype org data, assets and audit entries; sets SEED_USER_PASSWORD only where no password exists). Manual API requests: `docs/api.http` (REST Client).
+Commands (from the repo root): `npm run dev` (frontend), `npm run dev:api` (backend), `npm run dev:api:test-db` (backend on the test project for manual testing: `TEST_DATABASE_URL`, schema `rpw_uat`, bucket `rpw-files-test`; set up with `npm run db:setup:test-db`), `npm run build | typecheck | lint | test` (both workspaces), `npm run db:check[:test]` (read-only connection test), `npm run db:migrate[:status]`, `npm run storage:check` (Supabase Storage bucket round trip), `npm run db:seed` (prototype org data, assets and audit entries; sets SEED_USER_PASSWORD only where no password exists). Manual API requests: `docs/api.http` (REST Client).
 
 
 # Project Instructions
