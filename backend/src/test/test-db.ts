@@ -5,6 +5,7 @@ import { initModels } from "../db/models.js";
 import { createSequelize } from "../db/sequelize.js";
 import { seedAssets } from "../db/seed/seed-assets.js";
 import { seedOrg } from "../db/seed/seed-org.js";
+import { seedRequisitions } from "../db/seed/seed-requisitions.js";
 
 /* Integration tests run against TEST_DATABASE_URL (a separate Supabase project), in their own
    schema. testDatabaseUrl() refuses if that URL is missing or points at the main database. */
@@ -33,6 +34,7 @@ export async function resetTestDatabase(env: Env) {
     await createMigrator(sequelize, TEST_SCHEMA).up();
     await seedOrg(sequelize, { initialPassword: TEST_PASSWORD });
     await seedAssets(sequelize);
+    await seedRequisitions(sequelize);
   } finally {
     await sequelize.close();
   }

@@ -8,6 +8,9 @@
   "scripts": {
     "dev": "npm run dev -w frontend",
     "dev:api": "npm run dev -w backend",
+    "dev:api:test-db": "npm run dev:test-db -w backend",
+    "db:setup:test-db": "npm run db:setup:test-db -w backend",
+    "storage:check:test-db": "npm run storage:check:test-db -w backend",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "npm run lint --workspaces",

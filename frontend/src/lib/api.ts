@@ -24,7 +24,7 @@ let onUnauthorized: (() => void) | null = null;
 export function setUnauthorizedHandler(fn: (() => void) | null) { onUnauthorized = fn; }
 
 /* A Blob body (an uploaded file) is sent as it is, with its own type; anything else as JSON */
-async function request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function request<T>(method: "GET" | "POST" | "PUT" | "PATCH", path: string, body?: unknown): Promise<T> {
   const file = typeof Blob !== "undefined" && body instanceof Blob ? body : null;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (file) headers["Content-Type"] = file.type || "application/octet-stream";
@@ -54,6 +54,8 @@ async function request<T>(method: "GET" | "POST", path: string, body?: unknown):
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown = {}) => request<T>("POST", path, body),
+  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
   upload: <T>(path: string, file: Blob) => request<T>("POST", path, file),
 };
 

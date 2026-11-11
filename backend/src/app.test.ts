@@ -10,6 +10,8 @@ import type { AuditService } from "./modules/audit/audit.service.js";
 import type { AuthService } from "./modules/auth/auth.service.js";
 import type { InvoiceService } from "./modules/invoices/invoices.service.js";
 import type { OrgService } from "./modules/org/org.service.js";
+import type { RequisitionService } from "./modules/requisitions/requisitions.service.js";
+import type { SettingsService } from "./modules/settings/settings.service.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { validate } from "./middleware/validate.js";
 
@@ -24,6 +26,8 @@ const appWith = (checkDatabase: () => Promise<unknown>) =>
     attachments: {} as AttachmentService,
     audit: {} as AuditService,
     invoices: {} as InvoiceService,
+    requisitions: {} as RequisitionService,
+    settings: {} as SettingsService,
     cookie: { secure: false }, devLoginEnabled: false,
   });
 

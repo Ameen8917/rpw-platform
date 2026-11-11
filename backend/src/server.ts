@@ -13,6 +13,8 @@ import { createAuthService } from "./modules/auth/auth.service.js";
 import { createClaudeInvoiceReader } from "./modules/invoices/invoice-reader.js";
 import { createInvoiceService } from "./modules/invoices/invoices.service.js";
 import { createOrgService } from "./modules/org/org.service.js";
+import { createRequisitionService } from "./modules/requisitions/requisitions.service.js";
+import { createSettingsService } from "./modules/settings/settings.service.js";
 
 async function main() {
   const env = loadEnv();
@@ -32,7 +34,8 @@ async function main() {
     : createUnconfiguredStorage();
   if (!env.SUPABASE_URL) console.warn("Supabase Storage is not configured: saving signatures and attachments will answer 503 (docs/supabase-setup.md).");
   const files = createFilesService({ storage, bucket: env.SUPABASE_STORAGE_BUCKET });
-  const assets = createAssetService({ files });
+  const settings = createSettingsService();
+  const assets = createAssetService({ files, settings });
   const invoiceReader = env.ANTHROPIC_API_KEY ? createClaudeInvoiceReader({ apiKey: env.ANTHROPIC_API_KEY, model: env.INVOICE_AI_MODEL }) : null;
   console.log(invoiceReader
     ? `Invoice reading: AI reading on (${env.INVOICE_AI_MODEL}, ${env.INVOICE_AI_HOURLY_LIMIT} per person per hour).`
@@ -48,6 +51,8 @@ async function main() {
     attachments: createAttachmentService({ assets, files }),
     audit: createAuditService(),
     invoices: createInvoiceService({ reader: invoiceReader, hourlyLimit: env.INVOICE_AI_HOURLY_LIMIT }),
+    requisitions: createRequisitionService({ assets, settings }),
+    settings,
     cookie: { secure: env.NODE_ENV === "production" },
     devLoginEnabled: env.DEV_LOGIN_ENABLED,
   });

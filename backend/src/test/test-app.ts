@@ -10,6 +10,8 @@ import { createMemoryStorage, type FileStorage } from "../modules/files/storage.
 import { createAuthService } from "../modules/auth/auth.service.js";
 import { createInvoiceService } from "../modules/invoices/invoices.service.js";
 import { createOrgService } from "../modules/org/org.service.js";
+import { createRequisitionService } from "../modules/requisitions/requisitions.service.js";
+import { createSettingsService } from "../modules/settings/settings.service.js";
 import { TEST_PASSWORD, TEST_SESSION_SECRET } from "./test-db.js";
 
 export const TEST_AUTH_OPTIONS = { sessionSecret: TEST_SESSION_SECRET, sessionTtlHours: 12 };
@@ -18,7 +20,8 @@ export const TEST_AUTH_OPTIONS = { sessionSecret: TEST_SESSION_SECRET, sessionTt
     override any dependency */
 export function createTestApp(sequelize: Sequelize, overrides: Partial<AppDeps> = {}, storage: FileStorage = createMemoryStorage()) {
   const files = createFilesService({ storage, bucket: "test" });
-  const assets = createAssetService({ files });
+  const settings = createSettingsService();
+  const assets = createAssetService({ files, settings });
   return createApp({
     corsOrigin: "http://localhost:5173",
     checkDatabase: () => sequelize.query("SELECT 1"),
@@ -29,6 +32,8 @@ export function createTestApp(sequelize: Sequelize, overrides: Partial<AppDeps> 
     attachments: createAttachmentService({ assets, files }),
     audit: createAuditService(),
     invoices: createInvoiceService({ reader: null, hourlyLimit: 30 }),
+    requisitions: createRequisitionService({ assets, settings }),
+    settings,
     cookie: { secure: false },
     devLoginEnabled: true,
     ...overrides,

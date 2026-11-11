@@ -13,6 +13,12 @@ export function NewReq({ ctx, onCancel, onCreate }) {
   const [f, setF] = useState({ dealershipId: myD[0].id, facilityId: "", deptId: user.deptId || "DEP_IT", item: "", qty: 1, estCost: "", justification: "", expectedDelivery: "", advReq: false, advAmount: "", advTerms: "" });
   const fac = facilities.filter((x) => x.dealershipId === f.dealershipId && x.active);
   const dep = DEP(f.deptId);
+  const [busy, setBusy] = useState(false);
+  async function submit(draft) {
+    if (busy) return;
+    setBusy(true);
+    try { await onCreate(draft); } finally { setBusy(false); }
+  }
   const ok = f.item.trim() && f.estCost && f.justification.trim();
   return (
     <div className="space-y-4">
@@ -59,13 +65,13 @@ export function NewReq({ ctx, onCancel, onCreate }) {
             : f.advReq ? " Advance approved by the Accounts Manager, then paid by Accounts." : ""}
         </div>
         <div className="mt-4 flex gap-2">
-          <Btn kind="ghost" onClick={onCancel}>Cancel</Btn>
-          <Btn icon={Plus} disabled={!ok || (f.advReq && !f.advAmount)} onClick={() => onCreate({
+          <Btn kind="ghost" disabled={busy} onClick={onCancel}>Cancel</Btn>
+          <Btn icon={Plus} loading={busy} disabled={!ok || (f.advReq && !f.advAmount)} onClick={() => submit({
             dealershipId: f.dealershipId, facilityId: f.facilityId, deptId: f.deptId, item: f.item, qty: f.qty,
             estCost: Number(f.estCost), justification: f.justification, expectedDelivery: f.expectedDelivery,
             advance: { required: f.advReq, amount: Number(f.advAmount) || 0, terms: f.advTerms },
             payments: { advance: null, balance: null },
-          })}>Raise requisition</Btn>
+          })}>{busy ? "Raising…" : "Raise requisition"}</Btn>
         </div>
       </Card>
     </div>

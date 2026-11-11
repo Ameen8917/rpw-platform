@@ -1,4 +1,5 @@
-/* npm run db:seed — loads the prototype's dealerships, facilities, departments and people.
+/* npm run db:seed — loads the prototype's dealerships, facilities, departments, people, assets,
+   requisitions and the default group limits.
    Re-runnable. Users who can sign in get SEED_USER_PASSWORD only if they have no password yet. */
 import "dotenv/config";
 import { describeDatabaseUrl, EnvError, loadEnv } from "../config/env.js";
@@ -6,6 +7,7 @@ import { initModels } from "../db/models.js";
 import { createSequelize } from "../db/sequelize.js";
 import { seedAssets } from "../db/seed/seed-assets.js";
 import { seedOrg } from "../db/seed/seed-org.js";
+import { seedRequisitions } from "../db/seed/seed-requisitions.js";
 
 async function main() {
   const env = loadEnv();
@@ -21,6 +23,8 @@ async function main() {
     console.log(`Initial password set for ${r.passwordsSet} user(s)${r.passwordsSet ? "" : " (everyone already had one)"}.`);
     const a = await seedAssets(sequelize);
     console.log(`Inserted ${a.assets} asset(s), ${a.accessories} accessory(ies), ${a.auditEntries} audit entry(ies); existing rows left as they were.`);
+    const q = await seedRequisitions(sequelize);
+    console.log(`Inserted ${q.requisitions} requisition(s), ${q.purchases} purchase record(s), ${q.settings} group setting(s); existing rows left as they were.`);
   } finally {
     await sequelize.close();
   }

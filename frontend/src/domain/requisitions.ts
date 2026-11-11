@@ -13,6 +13,8 @@ export const REQ_STATUS = {
 /* Does this purchase need Director approval before it can be bought?
    Corporate requisitions are excluded — the Director already signs there as Business Head. */
 export function needsDirectorPurchase(r: Requisition, approvers?: (User | undefined)[]) {
+  /* From the API, which also counts approvers' personal limits (R6) */
+  if (typeof r.directorPurchaseRequired === "boolean") return r.directorPurchaseRequired;
   if (r.dealershipId === "D_CORP") return false;
   if (r.estCost > LIMITS.purchaseDirector) return true;
   /* A personal approval limit pulls the Director in even below the group threshold */
@@ -36,9 +38,9 @@ export function reqStatus(r: Requisition): ReqStatus {
 
 /* Approver silence: who is holding this up, and for how long */
 export type Stage = "bh" | "fn";
-export function escalation(r: Requisition): { stage: Stage; days: number } | null {
+export function escalation(r: Requisition, now: Date = TODAY): { stage: Stage; days: number } | null {
   if (reqStatus(r) !== "pending") return null;
-  const daysSince = (iso: string) => Math.floor((TODAY.getTime() - new Date(iso).getTime()) / 86400000);
+  const daysSince = (iso: string) => Math.floor((now.getTime() - new Date(iso).getTime()) / 86400000);
   if (!r.bh.decision) {
     const d = daysSince(r.raisedAt);
     return d >= LIMITS.slaDays ? { stage: "bh", days: d } : null;
@@ -55,7 +57,7 @@ export function escalation(r: Requisition): { stage: Stage; days: number } | nul
 export function stageApprover(r: Requisition, stage: string, dealerships: Dealership[], departments: Department[]) {
   if (stage === "bh") {
     const dl = dealerships.find((d) => d.id === r.dealershipId);
-    return dl?.isCorporate ? "U_ARJ" : dl?.headId;
+    return dl?.headId; /* the Director heads Corporate */
   }
   return departments.find((d) => d.id === r.deptId)?.functionalHeadId;
 }

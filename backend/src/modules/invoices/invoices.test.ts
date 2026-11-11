@@ -8,6 +8,8 @@ import type { AuditService } from "../audit/audit.service.js";
 import type { AuthContext, AuthService } from "../auth/auth.service.js";
 import { permissionsFor } from "../auth/permissions.js";
 import type { OrgService } from "../org/org.service.js";
+import type { RequisitionService } from "../requisitions/requisitions.service.js";
+import type { SettingsService } from "../settings/settings.service.js";
 import type { InvoiceReader } from "./invoice-reader.js";
 import { extractedInvoice, INVOICE_LIMITS, sniffInvoiceType } from "./invoices.schemas.js";
 import { createInvoiceService } from "./invoices.service.js";
@@ -41,6 +43,7 @@ function appWith(reader: InvoiceReader | null, hourlyLimit = 30) {
     org: {} as OrgService, assets: {} as AssetService, custody: {} as CustodyService,
     attachments: {} as AttachmentService, audit: {} as AuditService,
     invoices: createInvoiceService({ reader, hourlyLimit }),
+    requisitions: {} as RequisitionService, settings: {} as SettingsService,
     cookie: { secure: false }, devLoginEnabled: false,
   });
 }

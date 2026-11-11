@@ -1,5 +1,5 @@
-import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
-import { X, type LucideIcon } from "lucide-react";
+import { useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { Loader2, X, type LucideIcon } from "lucide-react";
 import { cx } from "../lib/format";
 import { T } from "../theme";
 
@@ -9,13 +9,27 @@ export interface BtnProps {
   kind?: "primary" | "secondary" | "ghost" | "danger";
   icon?: Icon;
   children?: ReactNode;
-  onClick?: MouseEventHandler<HTMLButtonElement>;
+  /** If this returns a promise (an async save), the button shows a spinner and ignores clicks until it settles. */
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => unknown;
   disabled?: boolean;
   full?: boolean;
   size?: "sm" | "md";
   type?: "button" | "submit";
+  /** Shows a spinner and blocks clicks while an action is in progress. */
+  loading?: boolean;
 }
-export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled, full, size = "md", type = "button" }: BtnProps) {
+export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled, full, size = "md", type = "button", loading = false }: BtnProps) {
+  const [pending, setPending] = useState(false);
+  const busy = loading || pending;
+  const off = disabled || busy;
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (busy || !onClick) return;
+    const result = onClick(e);
+    if (result instanceof Promise) {
+      setPending(true);
+      result.catch(() => undefined).finally(() => setPending(false));
+    }
+  };
   const pad = size === "sm" ? "h-8 px-3 text-[13px]" : "h-10 px-4 text-sm";
   const styles = {
     primary: { background: T.primary, color: "#fff", border: "1px solid " + T.primary },
@@ -30,12 +44,13 @@ export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled,
     danger: "hover:bg-red-50",
   }[kind];
   return (
-    <button type={type} onClick={onClick} disabled={disabled}
+    <button type={type} onClick={handleClick} disabled={off} aria-busy={busy || undefined}
       className={cx("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-[filter,background-color,border-color] duration-150 active:translate-y-px",
         // Full-width buttons may shrink so two of them share a modal footer instead of overflowing it
-        pad, full ? "w-full min-w-0" : "shrink-0",disabled ? "cursor-not-allowed opacity-40" : hover)}
+        pad, full ? "w-full min-w-0" : "shrink-0",busy ? "cursor-wait opacity-80" : disabled ? "cursor-not-allowed opacity-40" : hover)}
       style={{ ...styles, boxShadow: kind === "primary" || kind === "secondary" ? "0 1px 1px rgba(26,26,28,.06)" : undefined }}>
-      {Icon && <Icon size={size === "sm" ? 14 : 16} strokeWidth={2} />}{children}
+      {busy ? <Loader2 size={size === "sm" ? 14 : 16} strokeWidth={2} className="animate-spin" />
+        : Icon && <Icon size={size === "sm" ? 14 : 16} strokeWidth={2} />}{children}
     </button>
   );
 }

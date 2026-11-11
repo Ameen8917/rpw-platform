@@ -6,25 +6,26 @@ import { EmployeePicker } from "../../components/EmployeePicker";
 import { Avatar, Btn, Card, Field, Modal, SectionTitle, Td, Th, inputCls, inputStyle } from "../../components/ui";
 import { LIMITS } from "../../domain/config";
 import { CAPABILITIES, ROLE_OPTIONS } from "../../domain/permissions";
+import { useAdminSave } from "./useAdminSave";
 import { AddPerson } from "./forms";
+import { adminApi, settingsApi } from "../requisitions/api";
 import { inrShort } from "../../lib/format";
 import { T } from "../../theme";
 
-export function AuthorityTab({ ctx, setUsers, setDealerships, setDepartments, onLog, notify }) {
+export function AuthorityTab({ ctx, onChanged, notify }) {
   const { users, D, DEP } = ctx;
   const [edit, setEdit] = useState(null);
   const [handover, setHandover] = useState(null);
   const [addNew, setAddNew] = useState(false);
   const [rules, setRules] = useState({ ...LIMITS });
   const [q, setQ] = useState("");
+  const save = useAdminSave(onChanged, notify);
   const withLogin = users.filter((u) => !u.noLogin && !u.inactive)
     .filter((u) => !q || (u.name + u.empCode + u.title).toLowerCase().includes(q.toLowerCase()));
 
-  function saveRules(next) {
-    Object.assign(LIMITS, next); /* module-level rules the workflow reads */
-    setRules({ ...next });
-    onLog("Updated authority rules", "group", `Purchase ${inrShort(next.purchaseDirector)} · advance ${inrShort(next.advanceEscalation)} · payment ${inrShort(next.directorPayment)}`);
-    notify("Authority rules updated");
+  /* Saved on the server; the reload writes them into LIMITS, which the workflow rules read */
+  async function saveRules(next) {
+    if (await save(() => settingsApi.save(next), "Authority rules updated")) setRules({ ...LIMITS });
   }
 
   return (
@@ -107,33 +108,18 @@ export function AuthorityTab({ ctx, setUsers, setDealerships, setDepartments, on
       <RulesCard rules={rules} onSave={saveRules} />
 
       {handover && <HandoverModal leaver={handover} ctx={ctx} onClose={() => setHandover(null)}
-        onConfirm={({ successorId, revoke }) => {
+        onConfirm={async ({ successorId, revoke }) => {
+          /* The server moves role, scope, limit, personal powers and headships, so pending approvals follow */
           const succ = users.find((u) => u.id === successorId);
-          /* 1. Successor inherits role, scope and limit */
-          setUsers((l) => l.map((x) => {
-            if (x.id === successorId) return { ...x, role: handover.role, deptId: handover.deptId, dealershipIds: [...handover.dealershipIds], approvalLimit: handover.approvalLimit || null, noLogin: false };
-            if (x.id === handover.id && revoke) return { ...x, role: "staff", noLogin: true, approvalLimit: null, inactive: true };
-            return x;
-          }));
-          /* 2. Repoint any dealership they headed — this reroutes pending approvals automatically */
-          setDealerships((l) => l.map((d) => d.headId === handover.id ? { ...d, headId: successorId } : d));
-          /* 3. Repoint any function they headed */
-          setDepartments((l) => l.map((d) => d.functionalHeadId === handover.id ? { ...d, functionalHeadId: successorId } : d));
-          onLog("Role handover", handover.empCode, `${handover.name} → ${succ?.name} (${succ?.empCode})${revoke ? " · access revoked" : ""}`);
-          notify(`${succ?.name} now holds this role`);
-          setHandover(null);
+          if (await save(() => adminApi.handover(handover.id, successorId, revoke), `${succ?.name} now holds this role`)) setHandover(null);
         }} />}
 
-      {addNew && <AddPerson ctx={ctx} onClose={() => setAddNew(false)} onSave={(u) => {
-        setUsers((l) => [...l, { id: "U_" + Date.now(), source: "manual", ...u }]);
-        onLog("Added employee", u.empCode, `${u.name} · ${u.title}`);
-        notify("Person added — now assign their authority"); setAddNew(false);
+      {addNew && <AddPerson ctx={ctx} onClose={() => setAddNew(false)} onSave={async (u) => {
+        if (await save(() => adminApi.addPerson(u), "Person added — now assign their authority")) setAddNew(false);
       }} />}
 
-      {edit && <EditAuthority u={edit} ctx={ctx} onHandover={() => { setHandover(edit); setEdit(null); }} onClose={() => setEdit(null)} onSave={(next) => {
-        setUsers((l) => l.map((x) => x.id === edit.id ? { ...x, ...next } : x));
-        onLog("Changed authority", edit.empCode, `${edit.name} → ${ROLE_OPTIONS.find((r) => r.value === next.role)?.label}${next.approvalLimit ? ` · limit ${inrShort(next.approvalLimit)}` : ""}`);
-        notify("Authority updated"); setEdit(null);
+      {edit && <EditAuthority u={edit} ctx={ctx} onHandover={() => { setHandover(edit); setEdit(null); }} onClose={() => setEdit(null)} onSave={async (next) => {
+        if (await save(() => adminApi.setAuthority(edit.id, next), "Authority updated")) setEdit(null);
       }} />}
     </div>
   );
@@ -246,8 +232,10 @@ export function EditAuthority({ u, ctx, onClose, onSave, onHandover }) {
     <Modal title={`Authority — ${u.name}`} onClose={onClose}
       footer={<><Btn kind="ghost" full onClick={onClose}>Cancel</Btn>
         <Btn full onClick={() => onSave({
-          role: f.role, deptId: f.deptId || null, dealershipIds: [f.dealershipId],
-          approvalLimit: f.approvalLimit ? Number(f.approvalLimit) : null, noLogin: f.noLogin,
+          role: f.role, deptId: needsDept ? f.deptId || null : null,
+          /* Business Heads may hold several dealerships; this form changes the first */
+          dealershipIds: [f.dealershipId, ...u.dealershipIds.slice(1).filter((d) => d !== f.dealershipId && f.role === "business_head")],
+          approvalLimit: f.approvalLimit ? Number(f.approvalLimit) : null,
         })}>Save</Btn></>}>
       <div className="space-y-3">
         <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: T.canvas, color: T.sub }}>
