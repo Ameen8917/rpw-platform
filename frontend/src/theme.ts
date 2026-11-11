@@ -19,6 +19,8 @@ const LIGHT = {
   /* translucent layers */
   header: "rgba(244,243,240,.86)", overlay: "rgba(18,18,20,.5)", shadow: "rgba(26,26,28,.06)",
   placeholder: "#A19F99", selection: "#F3D3D6", focusRing: "rgba(35,35,38,.12)",
+  /* charts: one hue (the banner gold) for single-series bars; dim = bars outside the selection */
+  chart: "#A8742A", chartDim: "#E6D8C3",
 };
 
 /* Warm charcoal rather than pure black, so it keeps the brand's feel */
@@ -32,6 +34,7 @@ const DARK: typeof LIGHT = {
   rail: "#0F0F10", railInk: "#EDEDEB", railSub: "#8D8C88", railActive: "#222224",
   header: "rgba(20,20,21,.86)", overlay: "rgba(0,0,0,.6)", shadow: "rgba(0,0,0,.3)",
   placeholder: "#6E6C67", selection: "#5A2A2F", focusRing: "rgba(236,235,232,.18)",
+  chart: "#BC8A42", chartDim: "#4A3E2D", // stepped for the dark band (checked with the dataviz validator)
 };
 
 export const PALETTES = { light: LIGHT, dark: DARK };
