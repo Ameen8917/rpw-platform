@@ -44,14 +44,14 @@ export function EmployeePicker({ users, dealershipId, value, onChange, allowNone
               placeholder="Search name or employee code" className="w-full text-sm outline-none" />
           </div>
           {open && (
-            <div className="absolute z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg shadow-lg" style={{ background: "#fff", border: "1px solid " + T.line, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+            <div className="absolute z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg shadow-lg" style={{ background: T.surface, border: "1px solid " + T.line, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
               {allowNone && (
-                <button onClick={() => { onChange(""); setOpen(false); }} className="w-full px-3 py-2 text-left text-[13px] hover:bg-slate-50" style={{ color: T.sub }}>
+                <button onClick={() => { onChange(""); setOpen(false); }} className="w-full px-3 py-2 text-left text-[13px] hover:bg-hover" style={{ color: T.sub }}>
                   {noneLabel}
                 </button>
               )}
               {matches.map((u) => (
-                <button key={u.id} onClick={() => { onChange(u.id); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50">
+                <button key={u.id} onClick={() => { onChange(u.id); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-hover">
                   <Avatar name={u.name} size={26} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold">{u.name}</span>

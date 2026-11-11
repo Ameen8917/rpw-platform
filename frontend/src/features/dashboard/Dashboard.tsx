@@ -26,7 +26,7 @@ export function Dashboard({ ctx, reqs, assets }) {
 
       <section className="hidden space-y-2 has-[.attn]:block">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.sub }}>Needs your attention</h2>
-        <Card pad={false} className="divide-y divide-stone-200/80">
+        <Card pad={false} className="divide-y divide-line/80">
           {(() => {
             const mineLate = reqs.filter((r) => {
               const e = escalation(r);

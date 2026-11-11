@@ -302,7 +302,7 @@ export function ReqDetail({ ctx, r, onDecide, onProcure, onPay, onVerify, onResu
                     <img src={doc.fileUrl} alt="Invoice" style={{ marginTop: 8, maxHeight: 220, width: "100%", objectFit: "contain", background: "#fff", border: "1px solid " + T.line, borderRadius: 6 }} />
                   </a>
                 ) : (
-                  <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "#fff", border: "1px solid " + T.line }}>
+                  <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: T.surface, border: "1px solid " + T.line }}>
                     <FileText size={18} style={{ color: T.sub }} />
                     <span className="min-w-0 flex-1 truncate text-[12px]">{doc.fileName}</span>
                   </div>

@@ -31,7 +31,7 @@ export function Pagination({ total, page, pageSize, onPage, onPageSize, noun = "
         </label>
       </div>
       <div className="flex items-center gap-1">
-        <button className={cx(btn, w.page === 1 ? "cursor-not-allowed opacity-40" : "hover:bg-black/[0.05]")}
+        <button className={cx(btn, w.page === 1 ? "cursor-not-allowed opacity-40" : "hover:bg-hover")}
           disabled={w.page === 1} onClick={() => onPage(w.page - 1)} aria-label="Previous page" style={{ color: T.sub }}>
           <ChevronLeft size={16} />
         </button>
@@ -39,12 +39,12 @@ export function Pagination({ total, page, pageSize, onPage, onPageSize, noun = "
           ? <span key={`gap${i}`} className="px-1 text-[13px]" style={{ color: T.sub }}>…</span>
           : (
             <button key={p} onClick={() => onPage(p)} aria-current={p === w.page ? "page" : undefined}
-              className={cx(btn, p !== w.page && "hover:bg-black/[0.05]")}
-              style={p === w.page ? { background: T.primary, color: "#fff" } : { color: T.ink }}>
+              className={cx(btn, p !== w.page && "hover:bg-hover")}
+              style={p === w.page ? { background: T.primary, color: T.onPrimary } : { color: T.ink }}>
               {p}
             </button>
           ))}
-        <button className={cx(btn, w.page === w.pages ? "cursor-not-allowed opacity-40" : "hover:bg-black/[0.05]")}
+        <button className={cx(btn, w.page === w.pages ? "cursor-not-allowed opacity-40" : "hover:bg-hover")}
           disabled={w.page === w.pages} onClick={() => onPage(w.page + 1)} aria-label="Next page" style={{ color: T.sub }}>
           <ChevronRight size={16} />
         </button>

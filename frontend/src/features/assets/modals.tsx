@@ -93,8 +93,8 @@ export function ReturnModal({ a, ctx, onClose, onSubmit, busy = false }) {
             <button key={i} onClick={() => setMissing((m) => ({ ...m, [i]: !m[i] }))}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left"
               style={{ background: missing[i] ? T.badBg : T.canvas }}>
-              <span className="flex h-4 w-4 items-center justify-center rounded" style={{ border: "1.5px solid " + (missing[i] ? T.bad : T.line), background: missing[i] ? T.bad : "#fff" }}>
-                {missing[i] && <X size={11} color="#fff" />}
+              <span className="flex h-4 w-4 items-center justify-center rounded" style={{ border: "1.5px solid " + (missing[i] ? T.bad : T.line), background: missing[i] ? T.bad : T.surface }}>
+                {missing[i] && <X size={11} color={T.surface} />}
               </span>
               <span className="text-[13px]" style={{ textDecoration: missing[i] ? "line-through" : "none" }}>{n}</span>
               {missing[i] && <span className="ml-auto text-[11px] font-semibold" style={{ color: T.bad }}>not returned</span>}

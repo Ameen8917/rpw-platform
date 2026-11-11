@@ -93,7 +93,7 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
           <tbody>
             {withLogin.map((u) => (
               <tr key={u.id} onClick={() => setEdit(u)} className="group cursor-pointer" style={{ borderTop: "1px solid " + T.line }}>
-                <td className="sticky left-0 z-10 px-4 py-2.5 group-hover:!bg-[#FAF9F7]" style={{ background: T.surface }}>
+                <td className="sticky left-0 z-10 px-4 py-2.5 group-hover:!bg-hover" style={{ background: T.surface }}>
                   <div className="flex items-center gap-3">
                     <Avatar name={u.name} size={32} />
                     <div className="min-w-0">
@@ -110,7 +110,7 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
                 {CAPABILITIES.map((c, i) => {
                   const yes = c.has(u);
                   return (
-                    <td key={c.key} className="px-1.5 py-2.5 text-center group-hover:bg-[#FAF9F7]"
+                    <td key={c.key} className="px-1.5 py-2.5 text-center group-hover:bg-hover"
                       style={{ borderLeft: i === 0 || c.group !== CAPABILITIES[i - 1].group ? "1px solid " + T.line : "none" }}
                       title={`${c.label}: ${yes ? "yes" : "no"}`}>
                       {yes
@@ -121,12 +121,12 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
                     </td>
                   );
                 })}
-                <td className="whitespace-nowrap px-4 py-2.5 text-right group-hover:bg-[#FAF9F7]" style={{ borderLeft: "1px solid " + T.line }}>
+                <td className="whitespace-nowrap px-4 py-2.5 text-right group-hover:bg-hover" style={{ borderLeft: "1px solid " + T.line }}>
                   {u.approvalLimit
                     ? <span className="rounded-[4px] px-2 py-0.5 text-[12px] font-medium" style={{ color: T.warn, background: T.warnBg }}>Up to {inrShort(u.approvalLimit)}</span>
                     : <span className="text-[12px]" style={{ color: T.sub }}>No cap</span>}
                 </td>
-                <td className="pr-3 group-hover:bg-[#FAF9F7]">
+                <td className="pr-3 group-hover:bg-hover">
                   <ChevronRight size={16} className="opacity-40 group-hover:opacity-100" style={{ color: T.sub }} />
                 </td>
               </tr>
@@ -197,7 +197,7 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
 
 /* One tone per role so seniority is readable at a glance */
 const ROLE_TONE = {
-  director: { color: T.surface, background: T.primary },
+  director: { color: T.onPrimary, background: T.primary },
   business_head: { color: T.accent, background: T.warnBg },
   functional_head: { color: T.ok, background: T.okBg },
   manager: { color: T.slate, background: T.slateBg },
@@ -381,7 +381,7 @@ export function EditAuthority({ u, ctx, onClose, onSave, onHandover }) {
           <div className="text-xs font-semibold" style={{ color: T.primaryDark }}>This person will be able to</div>
           <div className="mt-2 flex flex-wrap gap-1">
             {CAPABILITIES.filter((c) => c.has(preview)).map((c) => (
-              <span key={c.key} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: "#fff" }}>{c.label}</span>
+              <span key={c.key} className="whitespace-nowrap rounded-[4px] px-2 py-0.5 text-[11px] font-medium" style={{ color: T.primary, background: T.surface }}>{c.label}</span>
             ))}
             {CAPABILITIES.filter((c) => c.has(preview)).length === 0 && (
               <span className="text-[12px]" style={{ color: T.sub }}>Nothing — view only, and can hold assets.</span>

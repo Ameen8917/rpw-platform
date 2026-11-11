@@ -54,7 +54,7 @@ export function Requisitions({ ctx, reqs }) {
               </tr></thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.id} onClick={() => go("reqdetail", r.id)} className="cursor-pointer hover:bg-slate-50" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
+                  <tr key={r.id} onClick={() => go("reqdetail", r.id)} className="cursor-pointer hover:bg-hover" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
                     <Td><div className="font-semibold">{r.item}</div><div className="font-mono text-[11px]" style={{ color: T.sub }}>{r.ref}</div></Td>
                     <Td sub>{D(r.dealershipId).name}</Td>
                     <Td sub>{DEP(r.deptId).name}</Td>
@@ -72,7 +72,7 @@ export function Requisitions({ ctx, reqs }) {
       )}
 
       {perm.canRaise && (
-        <button onClick={() => go("newreq")} className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg md:hidden" style={{ background: T.primary }}>
+        <button onClick={() => go("newreq")} className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-lg md:hidden" style={{ background: T.primary, color: T.onPrimary }}>
           <Plus size={24} />
         </button>
       )}

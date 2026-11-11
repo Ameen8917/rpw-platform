@@ -131,7 +131,7 @@ export function Payments({ ctx, reqs }) {
                   const p = payStatus(r);
                   const due = dueAmount(r);
                   return (
-                    <tr key={r.id} onClick={() => go("reqdetail", r.id)} className="cursor-pointer hover:bg-slate-50" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
+                    <tr key={r.id} onClick={() => go("reqdetail", r.id)} className="cursor-pointer hover:bg-hover" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
                       <Td><div className="font-semibold">{r.item}</div><div className="font-mono text-[11px]" style={{ color: T.sub }}>{r.ref}</div></Td>
                       <Td sub>{D(r.dealershipId).name}</Td>
                       <Td sub>{DEP(r.deptId).name}</Td>

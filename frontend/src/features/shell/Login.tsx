@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { Btn, Field, inputCls, inputStyle } from "../../components/ui";
 import { errorMessage } from "../../lib/api";
 import { T } from "../../theme";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 import { sessionApi, type DevUser, type SessionInfo } from "./session";
 
 export function Login({ onSignedIn, expired }: { onSignedIn: (s: SessionInfo) => void; expired?: boolean }) {
@@ -41,7 +42,8 @@ export function Login({ onSignedIn, expired }: { onSignedIn: (s: SessionInfo) =>
           className="relative block aspect-[3/2] w-full object-cover md:absolute md:inset-0 md:aspect-auto md:h-full md:object-contain" />
       </aside>
 
-      <div className="flex items-center justify-center px-5 py-10">
+      <div className="relative flex items-center justify-center px-5 py-10">
+      <div className="absolute right-3 top-3"><ThemeSwitcher /></div>
       <div className="w-full max-w-sm">
         <h1 className="font-display text-[28px] font-medium leading-tight" style={{ color: T.ink }}>Sign in</h1>
         <p className="mb-6 mt-1 text-[13px]" style={{ color: T.sub }}>Use your employee code. One login across every RPW module.</p>
@@ -65,7 +67,7 @@ export function Login({ onSignedIn, expired }: { onSignedIn: (s: SessionInfo) =>
         </div>
 
         {devUsers.length > 0 && (
-          <div className="mt-8 rounded-md p-4" style={{ border: "1px dashed " + T.line, background: "rgba(255,255,255,.5)" }}>
+          <div className="mt-8 rounded-md p-4" style={{ border: "1px dashed " + T.line, background: T.surface }}>
             <Field label="Development only — sign in as">
               <select className={inputCls} style={inputStyle} value="" disabled={busy}
                 onChange={(e) => e.target.value && attempt(() => sessionApi.loginAs(e.target.value))}>

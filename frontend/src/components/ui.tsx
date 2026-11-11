@@ -32,16 +32,16 @@ export function Btn({ kind = "primary", icon: Icon, children, onClick, disabled,
   };
   const pad = size === "sm" ? "h-8 px-3 text-[13px]" : "h-10 px-4 text-sm";
   const styles = {
-    primary: { background: T.primary, color: "#fff", border: "1px solid " + T.primary },
+    primary: { background: T.primary, color: T.onPrimary, border: "1px solid " + T.primary },
     secondary: { background: T.surface, color: T.ink, border: "1px solid " + T.line },
     ghost: { background: "transparent", color: T.sub, border: "1px solid transparent" },
     danger: { background: T.surface, color: T.bad, border: "1px solid " + T.line },
   }[kind];
   const hover = {
     primary: "hover:brightness-[1.18]",
-    secondary: "hover:bg-stone-50 hover:border-stone-300",
-    ghost: "hover:bg-black/[0.04]",
-    danger: "hover:bg-red-50",
+    secondary: "hover:bg-hover hover:border-line-strong",
+    ghost: "hover:bg-hover",
+    danger: "hover:bg-bad-soft",
   }[kind];
   return (
     <button type={type} onClick={handleClick} disabled={off} aria-busy={busy || undefined}
@@ -71,13 +71,13 @@ export const inputStyle: CSSProperties = { border: "1px solid " + T.line, color:
 export function Modal({ title, onClose, children, footer }: { title: ReactNode; onClose: () => void; children?: ReactNode; footer?: ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6"
-      style={{ background: "rgba(18,18,20,.5)", backdropFilter: "blur(2px)" }} onClick={onClose}>
+      style={{ background: T.overlay, backdropFilter: "blur(2px)" }} onClick={onClose}>
       {/* Column layout with a bounded height: header and footer stay put, the middle scrolls */}
       <div className="flex w-full max-w-lg flex-col rounded-t-xl md:rounded-xl"
         style={{ background: T.surface, maxHeight: "88vh", boxShadow: "0 24px 48px -12px rgba(18,18,20,.35)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between gap-4 px-5 py-4" style={{ borderBottom: "1px solid " + T.line }}>
           <h3 className="font-display text-lg font-medium leading-tight">{title}</h3>
-          <button onClick={onClose} aria-label="Close" className="-mr-1 rounded-md p-1 hover:bg-black/[0.05]" style={{ color: T.sub }}><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close" className="-mr-1 rounded-md p-1 hover:bg-hover" style={{ color: T.sub }}><X size={18} /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}>
