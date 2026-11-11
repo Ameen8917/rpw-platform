@@ -28,7 +28,7 @@ import { NotificationBell } from "./features/shell/NotificationBell";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
 import { useHashRoute } from "./features/shell/route";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
-import { Brand, NavList, ScopeNote } from "./features/shell/Sidebar";
+import { Brand, NavList, navKeyFor, ScopeNote } from "./features/shell/Sidebar";
 import { ApiError, errorMessage } from "./lib/api";
 import { TODAY, fmtDate } from "./lib/format";
 import { T } from "./theme";
@@ -331,8 +331,8 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden" style={{ background: T.surface, borderTop: "1px solid " + T.line }}>
         {NAV.slice(0, 5).map((n) => (
-          <button key={n.key} onClick={() => go(n.key)} className="flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5" style={{ color: view === n.key ? T.primary : T.sub }}>
-            <n.icon size={19} strokeWidth={view === n.key ? 2 : 1.6} /><span className="text-[10px] font-medium">{n.label}</span>
+          <button key={n.key} onClick={() => go(n.key)} className="flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5" style={{ color: navKeyFor(view) === n.key ? T.primary : T.sub }}>
+            <n.icon size={19} strokeWidth={navKeyFor(view) === n.key ? 2 : 1.6} /><span className="text-[10px] font-medium">{n.label}</span>
           </button>
         ))}
       </nav>

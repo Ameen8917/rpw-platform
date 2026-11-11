@@ -21,7 +21,7 @@ export function AdminConsole({ ctx, onChanged, notify }) {
   const tabs: [string, string, LucideIcon][] = [["authority", "Authority", ShieldCheck], ["users", "People", Users], ["dealerships", "Dealerships", Building2], ["facilities", "Locations", MapPin], ["departments", "Departments", Layers]];
 
   function toggleActive(kind: "dealerships" | "facilities" | "departments", record: { id: string; active: boolean }) {
-    save(() => adminApi.setActive(kind, record.id, !record.active), "Master data updated");
+    return save(() => adminApi.setActive(kind, record.id, !record.active), "Master data updated");
   }
 
   return (

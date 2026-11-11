@@ -16,11 +16,19 @@ export function Brand({ dark, sub = "Operations" }: { dark?: boolean; sub?: stri
   );
 }
 
+/* Pages without a menu entry of their own light up the section they belong to. */
+const NAV_PARENT: Record<string, string> = { reqdetail: "reqs", newreq: "reqs", assetdetail: "assets", newasset: "assets" };
+
+export function navKeyFor(view: string): string {
+  return NAV_PARENT[view] ?? view;
+}
+
 export function NavList({ nav, view, go }) {
+  const current = navKeyFor(view);
   return (
     <nav className="space-y-0.5">
       {nav.map((n) => {
-        const on = view === n.key;
+        const on = current === n.key;
         return (
           <button key={n.key} onClick={() => go(n.key)} aria-current={on ? "page" : undefined}
             className="relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13.5px] font-medium transition-colors duration-150 hover:text-white"
