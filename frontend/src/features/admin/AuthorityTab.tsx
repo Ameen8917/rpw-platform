@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
-  ShieldCheck, Search, Plus, ChevronRight, CheckCircle2, Landmark,
+  ShieldCheck, Search, Plus, ChevronRight, Check, Landmark,
 } from "lucide-react";
 import { EmployeePicker } from "../../components/EmployeePicker";
-import { Avatar, Btn, Card, Field, Modal, SectionTitle, Td, Th, inputCls, inputStyle } from "../../components/ui";
+import { Avatar, Btn, Card, Field, Modal, SectionTitle, inputCls, inputStyle } from "../../components/ui";
 import { LIMITS } from "../../domain/config";
-import { CAPABILITIES, ROLE_OPTIONS } from "../../domain/permissions";
+import { CAPABILITIES, CAPABILITY_GROUPS, ROLE_OPTIONS } from "../../domain/permissions";
 import { useAdminSave } from "./useAdminSave";
 import { AddPerson } from "./forms";
 import { adminApi, settingsApi } from "../requisitions/api";
@@ -19,9 +19,19 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
   const [addNew, setAddNew] = useState(false);
   const [rules, setRules] = useState({ ...LIMITS });
   const [q, setQ] = useState("");
+  const [role, setRole] = useState("all");
   const save = useAdminSave(onChanged, notify);
-  const withLogin = users.filter((u) => !u.noLogin && !u.inactive)
-    .filter((u) => !q || (u.name + u.empCode + u.title).toLowerCase().includes(q.toLowerCase()));
+  const active = users.filter((u) => !u.noLogin && !u.inactive);
+  const roleRank = (r) => { const i = ROLE_OPTIONS.findIndex((o) => o.value === r); return i < 0 ? 99 : i; };
+  /* Most senior first, then by name, so the matrix reads top-down like the approval chain */
+  const withLogin = active
+    .filter((u) => role === "all" || u.role === role)
+    .filter((u) => !q || (u.name + u.empCode + u.title).toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => roleRank(a.role) - roleRank(b.role) || a.name.localeCompare(b.name));
+  const roleCounts = ROLE_OPTIONS.map((r) => ({ ...r, count: active.filter((u) => u.role === r.value).length }))
+    .filter((r) => r.count > 0);
+  const scopeOf = (u) => [u.dealershipIds.map((d) => D(d)?.name).filter(Boolean).join(", "), u.deptId ? DEP(u.deptId)?.name : ""]
+    .filter(Boolean).join(" · ");
 
   /* Saved on the server; the reload writes them into LIMITS, which the workflow rules read */
   async function saveRules(next) {
@@ -42,43 +52,102 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
           </div>
           <Btn size="sm" icon={Plus} onClick={() => setAddNew(true)}>Add person</Btn>
         </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <RoleChip active={role === "all"} onClick={() => setRole("all")} label="Everyone" count={active.length} />
+          {roleCounts.map((r) => (
+            <RoleChip key={r.value} active={role === r.value} onClick={() => setRole(r.value)} label={r.label} count={r.count} />
+          ))}
+        </div>
       </Card>
 
-      {/* Desktop: full matrix */}
+      {/* Desktop: full matrix, columns banded by workflow stage */}
       <Card pad={false} className="hidden overflow-x-auto md:block">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr style={{ background: T.canvas, color: T.sub }}>
-              <Th>Person</Th><Th>Role & scope</Th>
-              {CAPABILITIES.map((c) => <Th key={c.key} right><span title={c.label}>{c.short}</span></Th>)}
-              <Th right>Limit</Th>
+              <th rowSpan={2} className="sticky left-0 z-10 px-4 py-2 text-left align-bottom text-[10.5px] font-semibold uppercase tracking-wide" style={{ background: T.canvas, minWidth: 260 }}>
+                Person &amp; role
+              </th>
+              {CAPABILITY_GROUPS.map((g) => (
+                <th key={g.key} colSpan={CAPABILITIES.filter((c) => c.group === g.key).length}
+                  className="px-2 pb-1 pt-2.5 text-center text-[10.5px] font-semibold uppercase tracking-wide"
+                  style={{ borderLeft: "1px solid " + T.line, color: T.ink }}>
+                  {g.label}
+                </th>
+              ))}
+              <th rowSpan={2} className="px-4 py-2 text-right align-bottom text-[10.5px] font-semibold uppercase tracking-wide" style={{ borderLeft: "1px solid " + T.line }}>
+                Approval limit
+              </th>
+              <th rowSpan={2} aria-label="Edit" style={{ width: 32 }} />
+            </tr>
+            <tr style={{ background: T.canvas, color: T.sub }}>
+              {CAPABILITIES.map((c, i) => (
+                <th key={c.key} title={c.label}
+                  className="px-1.5 pb-2.5 pt-1 text-center align-bottom text-[11px] font-medium leading-tight"
+                  style={{ minWidth: 64, borderLeft: i === 0 || c.group !== CAPABILITIES[i - 1].group ? "1px solid " + T.line : "none" }}>
+                  {c.short}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {withLogin.map((u, i) => (
-              <tr key={u.id} onClick={() => setEdit(u)} className="cursor-pointer hover:bg-slate-50" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
-                <Td>
-                  <div className="font-semibold">{u.name}</div>
-                  <div className="font-mono text-[11px]" style={{ color: T.sub }}>{u.empCode}</div>
-                </Td>
-                <Td sub>
-                  <div>{ROLE_OPTIONS.find((r) => r.value === u.role)?.label || u.role}</div>
-                  <div className="text-[11px]">
-                    {u.dealershipIds.map((d) => D(d)?.name).join(", ")}{u.deptId ? ` · ${DEP(u.deptId)?.name}` : ""}
+            {withLogin.map((u) => (
+              <tr key={u.id} onClick={() => setEdit(u)} className="group cursor-pointer" style={{ borderTop: "1px solid " + T.line }}>
+                <td className="sticky left-0 z-10 px-4 py-2.5 group-hover:!bg-[#FAF9F7]" style={{ background: T.surface }}>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={u.name} size={32} />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="whitespace-nowrap font-semibold">{u.name}</span>
+                        <RoleBadge role={u.role} />
+                      </div>
+                      <div className="mt-0.5 truncate text-[11.5px]" style={{ color: T.sub, maxWidth: 240 }} title={scopeOf(u)}>
+                        <span className="font-mono">{u.empCode}</span>{scopeOf(u) && <> · {scopeOf(u)}</>}
+                      </div>
+                    </div>
                   </div>
-                </Td>
-                {CAPABILITIES.map((c) => (
-                  <Td key={c.key} right>
-                    {c.has(u)
-                      ? <CheckCircle2 size={15} style={{ color: T.ok, display: "inline" }} />
-                      : <span style={{ color: T.line }}>—</span>}
-                  </Td>
-                ))}
-                <Td right sub>{u.approvalLimit ? inrShort(u.approvalLimit) : "No cap"}</Td>
+                </td>
+                {CAPABILITIES.map((c, i) => {
+                  const yes = c.has(u);
+                  return (
+                    <td key={c.key} className="px-1.5 py-2.5 text-center group-hover:bg-[#FAF9F7]"
+                      style={{ borderLeft: i === 0 || c.group !== CAPABILITIES[i - 1].group ? "1px solid " + T.line : "none" }}
+                      title={`${c.label}: ${yes ? "yes" : "no"}`}>
+                      {yes
+                        ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ background: T.okBg }}>
+                            <Check size={14} strokeWidth={2.75} style={{ color: T.ok }} />
+                          </span>
+                        : <span className="inline-block h-1 w-1 rounded-full align-middle" style={{ background: T.line }} aria-label="no" />}
+                    </td>
+                  );
+                })}
+                <td className="whitespace-nowrap px-4 py-2.5 text-right group-hover:bg-[#FAF9F7]" style={{ borderLeft: "1px solid " + T.line }}>
+                  {u.approvalLimit
+                    ? <span className="rounded-[4px] px-2 py-0.5 text-[12px] font-medium" style={{ color: T.warn, background: T.warnBg }}>Up to {inrShort(u.approvalLimit)}</span>
+                    : <span className="text-[12px]" style={{ color: T.sub }}>No cap</span>}
+                </td>
+                <td className="pr-3 group-hover:bg-[#FAF9F7]">
+                  <ChevronRight size={16} className="opacity-40 group-hover:opacity-100" style={{ color: T.sub }} />
+                </td>
               </tr>
             ))}
+            {withLogin.length === 0 && (
+              <tr><td colSpan={CAPABILITIES.length + 3} className="px-4 py-8 text-center text-[13px]" style={{ color: T.sub }}>
+                No one matches this search.
+              </td></tr>
+            )}
           </tbody>
         </table>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-[11.5px]" style={{ borderTop: "1px solid " + T.line, color: T.sub, background: T.canvas }}>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full" style={{ background: T.okBg }}><Check size={10} strokeWidth={3} style={{ color: T.ok }} /></span>
+            Has this power
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-1 w-1 rounded-full" style={{ background: T.sub }} /> Does not
+          </span>
+          <span>Hover a column heading for its full meaning. Click a row to change role, scope or limit.</span>
+        </div>
       </Card>
 
       {/* Mobile: one card per person */}
@@ -88,10 +157,11 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
             <div className="flex items-center gap-3">
               <Avatar name={u.name} size={34} />
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">{u.name}</div>
-                <div className="text-[11px]" style={{ color: T.sub }}>
-                  {ROLE_OPTIONS.find((r) => r.value === u.role)?.label} · {u.dealershipIds.map((d) => D(d)?.name).join(", ")}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="text-sm font-semibold">{u.name}</span>
+                  <RoleBadge role={u.role} />
                 </div>
+                <div className="truncate text-[11px]" style={{ color: T.sub }}>{scopeOf(u)}</div>
               </div>
               <ChevronRight size={16} style={{ color: T.sub }} />
             </div>
@@ -122,6 +192,38 @@ export function AuthorityTab({ ctx, onChanged, notify }) {
         if (await save(() => adminApi.setAuthority(edit.id, next), "Authority updated")) setEdit(null);
       }} />}
     </div>
+  );
+}
+
+/* One tone per role so seniority is readable at a glance */
+const ROLE_TONE = {
+  director: { color: T.surface, background: T.primary },
+  business_head: { color: T.accent, background: T.warnBg },
+  functional_head: { color: T.ok, background: T.okBg },
+  manager: { color: T.slate, background: T.slateBg },
+  accounts_executive: { color: T.primary, background: T.primarySoft },
+};
+
+function RoleBadge({ role }) {
+  const label = ROLE_OPTIONS.find((r) => r.value === role)?.label || role;
+  return (
+    <span className="whitespace-nowrap rounded-[4px] px-1.5 py-px text-[10.5px] font-semibold"
+      style={ROLE_TONE[role] || { color: T.sub, background: T.canvas }}>
+      {label}
+    </span>
+  );
+}
+
+function RoleChip({ active, onClick, label, count }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-medium transition-colors"
+      style={active
+        ? { background: T.primary, color: T.surface, border: "1px solid " + T.primary }
+        : { background: T.surface, color: T.ink, border: "1px solid " + T.line }}>
+      {label}
+      <span className="text-[11px]" style={{ opacity: 0.65 }}>{count}</span>
+    </button>
   );
 }
 

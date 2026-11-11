@@ -2,26 +2,33 @@ import type { User } from "../types";
 
 /* The workflow matrix: every power in the platform, and who holds it.
    Each row is derived from the person's role, so changing a role changes their authority. */
+/* Column bands for the Authority table, in workflow order */
+export const CAPABILITY_GROUPS = [
+  { key: "approve", label: "Requisition approvals" },
+  { key: "money", label: "Purchase & payment" },
+  { key: "platform", label: "Platform" },
+];
+
 export const CAPABILITIES = [
-  { key: "raise", label: "Raise requisition", short: "Raise",
+  { key: "raise", group: "approve", label: "Raise requisition", short: "Raise",
     has: (u) => u.role === "manager" || u.role === "functional_head" },
-  { key: "bh", label: "Approve as Business Head", short: "BH approve",
+  { key: "bh", group: "approve", label: "Approve as Business Head", short: "Business Head",
     has: (u) => u.role === "business_head" || u.role === "director" },
-  { key: "fn", label: "Approve as functional head", short: "Functional",
+  { key: "fn", group: "approve", label: "Approve as functional head", short: "Functional head",
     has: (u) => u.role === "functional_head" },
-  { key: "dir", label: "Director approval (purchase & payment)", short: "Director",
+  { key: "dir", group: "approve", label: "Director approval (purchase & payment)", short: "Director",
     has: (u) => u.role === "director" },
-  { key: "procure", label: "Record procurement", short: "Procure",
+  { key: "procure", group: "money", label: "Record procurement", short: "Procure",
     has: (u) => u.role === "functional_head" },
-  { key: "advance", label: "Approve vendor advance", short: "Advance",
+  { key: "advance", group: "money", label: "Approve vendor advance", short: "Vendor advance",
     has: (u) => u.role === "manager" && u.deptId === "DEP_ACC" },
-  { key: "signoff", label: "Payment sign-off", short: "Sign-off",
+  { key: "signoff", group: "money", label: "Payment sign-off", short: "Final sign-off",
     has: (u) => !!u.grants?.includes("finance_signoff") },
-  { key: "pay", label: "Execute payment & enter UTR", short: "Pay",
+  { key: "pay", group: "money", label: "Execute payment & enter UTR", short: "Pay vendor",
     has: (u) => u.role === "accounts_executive" },
-  { key: "assets", label: "Add & issue assets", short: "Assets",
+  { key: "assets", group: "platform", label: "Add & issue assets", short: "Assets",
     has: (u) => u.role === "functional_head" || u.role === "director" },
-  { key: "admin", label: "Admin console", short: "Admin",
+  { key: "admin", group: "platform", label: "Admin console", short: "Admin",
     has: (u) => u.role === "director" || !!u.grants?.includes("admin_console") },
 ];
 
