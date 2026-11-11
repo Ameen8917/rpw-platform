@@ -77,7 +77,7 @@ export function AssetList({ ctx, assets }) {
               </tr></thead>
               <tbody>
                 {shown.map((a, i) => (
-                  <tr key={a.id} onClick={() => go("assetdetail", a.id)} className="cursor-pointer hover:bg-slate-50" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
+                  <tr key={a.id} onClick={() => go("assetdetail", a.id)} className="cursor-pointer hover:bg-hover" style={{ borderTop: i ? "1px solid " + T.line : "none" }}>
                     <Td><div className="font-semibold">{a.name}</div><div className="font-mono text-[11px]" style={{ color: T.sub }}>{a.code}</div></Td>
                     <Td sub>{D(a.dealershipId).name}</Td>
                     <Td sub>{a.facilityId ? F(a.facilityId).name : "—"}</Td>
@@ -95,7 +95,7 @@ export function AssetList({ ctx, assets }) {
         </>
       )}
       {perm.canAddExisting && (
-        <button onClick={() => go("newasset")} className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg md:hidden" style={{ background: T.primary }}><Plus size={24} /></button>
+        <button onClick={() => go("newasset")} className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-lg md:hidden" style={{ background: T.primary, color: T.onPrimary }}><Plus size={24} /></button>
       )}
       {labels && <LabelModal ctx={ctx} assets={labels} onClose={() => setLabels(null)} />}
     </div>

@@ -65,7 +65,7 @@ export function AttachmentsCard({ a, U, canEdit, onAdd, onRemove }: {
                 </div>
               </div>
               {canEdit && (
-                <button onClick={() => setRemoving(x)} aria-label={`Remove ${x.fileName}`} className="shrink-0 rounded-md p-1.5 hover:bg-black/[0.05]" style={{ color: T.sub }}>
+                <button onClick={() => setRemoving(x)} aria-label={`Remove ${x.fileName}`} className="shrink-0 rounded-md p-1.5 hover:bg-hover" style={{ color: T.sub }}>
                   <Trash2 size={16} />
                 </button>
               )}
@@ -93,12 +93,12 @@ function Thumb({ x }: { x: Attachment }) {
   const box = "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded";
   if (x.url && x.contentType.startsWith("image/")) {
     return (
-      <a href={x.url} target="_blank" rel="noopener noreferrer" className={box} style={{ background: "#fff", border: "1px solid " + T.line }}>
+      <a href={x.url} target="_blank" rel="noopener noreferrer" className={box} style={{ background: T.surface, border: "1px solid " + T.line }}>
         <img src={x.url} alt={x.caption || x.fileName} className="h-full w-full object-cover" />
       </a>
     );
   }
-  return <div className={box} style={{ background: "#fff", border: "1px solid " + T.line, color: T.sub }}><FileText size={20} /></div>;
+  return <div className={box} style={{ background: T.surface, border: "1px solid " + T.line, color: T.sub }}><FileText size={20} /></div>;
 }
 
 function AttachmentModal({ busy, onClose, onSubmit }: {
@@ -146,11 +146,11 @@ function AttachmentModal({ busy, onClose, onSubmit }: {
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-2">
-          <label className={picker} style={{ border: "1px dashed " + T.line, color: T.primary, background: "#fff" }}>
+          <label className={picker} style={{ border: "1px dashed " + T.line, color: T.primary, background: T.surface }}>
             <Camera size={16} />Take photo
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
           </label>
-          <label className={picker} style={{ border: "1px dashed " + T.line, color: T.primary, background: "#fff" }}>
+          <label className={picker} style={{ border: "1px dashed " + T.line, color: T.primary, background: T.surface }}>
             <FileText size={16} />Choose file
             <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={pick} />
           </label>

@@ -84,7 +84,7 @@ export function Procurement({ ctx, reqs, assets }) {
                     </button>
                     <div className="mt-2 space-y-1">
                       {items.map((a) => (
-                        <button key={a.id} onClick={() => go("assetdetail", a.id)} className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-white">
+                        <button key={a.id} onClick={() => go("assetdetail", a.id)} className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-hover">
                           <span className="text-[12px]" style={{ color: T.sub }}>{a.name} <span className="font-mono">({a.code})</span></span>
                           <span className="text-[12px] font-semibold">{inrFull(a.cost)}</span>
                         </button>

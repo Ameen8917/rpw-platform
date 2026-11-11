@@ -88,7 +88,7 @@ export function AssetDetail({ ctx, a, reqs, auditLog, onDispose, onAddAccessory,
           <Btn size="sm" kind="secondary" icon={FileText} onClick={() => setModal("label")}>Print label</Btn>
         </div>
         <p className="mt-1 text-[13px]" style={{ color: T.sub }}>Scan during physical audit to pull up this record.</p>
-        <div className="mt-3 flex justify-center rounded-lg p-3" style={{ background: "#fff", border: "1px solid " + T.line }}>
+        <div className="mt-3 flex justify-center rounded-lg p-3" style={{ background: T.surface, border: "1px solid " + T.line }}>
           <Barcode value={a.code} />
         </div>
         <div className="mt-2 text-center text-[11px]" style={{ color: T.sub }}>

@@ -54,7 +54,7 @@ export function LabelModal({ ctx, assets, onClose }) {
           <div className="flex gap-1 rounded-lg p-1" style={{ background: T.canvas }}>
             {Object.entries(LABEL_SIZES).map(([k, v]) => (
               <button key={k} onClick={() => setSize(k)} className="flex-1 rounded-md py-1.5 text-xs font-semibold"
-                style={size === k ? { background: "#fff", color: T.primary, border: "1px solid " + T.line } : { color: T.sub }}>{v.label}</button>
+                style={size === k ? { background: T.surface, color: T.primary, border: "1px solid " + T.line } : { color: T.sub }}>{v.label}</button>
             ))}
           </div>
         </Field>

@@ -60,7 +60,7 @@ function ReadButton({ status, busy, onRead }) {
 
 function DocChip({ doc, meta = null, background = T.canvas }) {
   return (
-    <div className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background, border: background === "#fff" ? "1px solid " + T.line : undefined }}>
+    <div className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background, border: background === T.surface ? "1px solid " + T.line : undefined }}>
       {doc.type?.startsWith("image")
         ? <img src={doc.url} alt="Invoice" style={{ height: 40, width: 40, objectFit: "cover", borderRadius: 4 }} />
         : <FileText size={18} style={{ color: T.sub }} />}
@@ -104,12 +104,12 @@ export function InvoiceScanner({ onFill, onAttach, compact }: { onFill: (item: a
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold"
-          style={{ border: "1px dashed " + T.line, color: T.primary, background: "#fff" }}>
+          style={{ border: "1px dashed " + T.line, color: T.primary, background: T.surface }}>
           <Search size={16} />Take photo
           <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handle} />
         </label>
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold"
-          style={{ border: "1px dashed " + T.line, color: T.primary, background: "#fff" }}>
+          style={{ border: "1px dashed " + T.line, color: T.primary, background: T.surface }}>
           <FileText size={16} />Upload file
           <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handle} />
         </label>
@@ -179,18 +179,18 @@ export function InvoiceUpload({ r, onExtract }) {
         Attach the vendor invoice and check its amount against the approved estimate of {inrFull(r.estCost)}.
       </p>
       <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold"
-        style={{ border: "1px dashed " + T.line, background: "#fff", color: T.primary }}>
+        style={{ border: "1px dashed " + T.line, background: T.surface, color: T.primary }}>
         <FileText size={16} />{inv.file ? "Replace invoice" : "Upload invoice (PDF or photo)"}
         <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handle} />
       </label>
 
-      {inv.doc && <DocChip doc={inv.doc} background="#fff" />}
+      {inv.doc && <DocChip doc={inv.doc} background={T.surface} />}
       {inv.doc && !data && <ReadButton status={inv.status} busy={inv.busy} onRead={read} />}
       {inv.err && <div className="mt-2 rounded-lg px-3 py-2 text-[12px]" style={{ background: T.warnBg, color: T.warn }}>{inv.err}</div>}
 
       {data && (
         <div className="mt-2 space-y-2">
-          <div className="rounded-lg p-3" style={{ background: "#fff", border: "1px solid " + T.line }}>
+          <div className="rounded-lg p-3" style={{ background: T.surface, border: "1px solid " + T.line }}>
             <div className="text-xs font-semibold" style={{ color: T.sub }}>Read from the invoice</div>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
               <dt style={{ color: T.sub }}>Vendor</dt><dd className="text-right font-semibold">{data.vendor || "—"}</dd>

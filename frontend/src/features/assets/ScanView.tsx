@@ -69,8 +69,8 @@ export function ScanView({ ctx, assets }) {
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
                       style={{ background: checked[i] ? T.okBg : T.canvas }}>
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
-                        style={{ border: "1.5px solid " + (checked[i] ? T.ok : T.line), background: checked[i] ? T.ok : "#fff" }}>
-                        {checked[i] && <CheckCircle2 size={13} color="#fff" />}
+                        style={{ border: "1.5px solid " + (checked[i] ? T.ok : T.line), background: checked[i] ? T.ok : T.surface }}>
+                        {checked[i] && <CheckCircle2 size={13} color={T.surface} />}
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold">{x.name}</span>

@@ -25,13 +25,14 @@ import { Requisitions } from "./features/requisitions/RequisitionList";
 import { reqApi, settingsApi, toProcureBody, toRaiseBody, type StageDecision, type StageKey } from "./features/requisitions/api";
 import { Login } from "./features/shell/Login";
 import { NotificationBell } from "./features/shell/NotificationBell";
+import { ThemeSwitcher } from "./features/shell/ThemeSwitcher";
 import { RoleSwitcher } from "./features/shell/RoleSwitcher";
 import { useHashRoute } from "./features/shell/route";
 import { sessionApi, useSession, type DevUser, type SessionInfo } from "./features/shell/session";
 import { Brand, NavList, navKeyFor, ScopeNote } from "./features/shell/Sidebar";
 import { ApiError, errorMessage } from "./lib/api";
 import { TODAY, fmtDate } from "./lib/format";
-import { T } from "./theme";
+import { PALETTES, T } from "./theme";
 
 type Toast = { msg: string; kind: "ok" | "error" } | null;
 
@@ -266,7 +267,7 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
       </aside>
 
       {navOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" style={{ background: "rgba(18,18,20,.5)" }} onClick={() => setNavOpen(false)}>
+        <div className="fixed inset-0 z-40 md:hidden" style={{ background: T.overlay }} onClick={() => setNavOpen(false)}>
           <div className="flex h-full w-64 flex-col px-3 py-5" style={{ background: T.rail }} onClick={(e) => e.stopPropagation()}>
             <div className="px-3 pb-6"><Brand dark /></div>
             <div className="min-h-0 flex-1 overflow-y-auto"><NavList nav={NAV} view={view} go={go} /></div>
@@ -277,13 +278,14 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
 
       <div className="md:pl-60">
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 px-4 md:px-8"
-          style={{ background: "rgba(244,243,240,.86)", backdropFilter: "saturate(1.4) blur(10px)", borderBottom: "1px solid " + T.line }}>
+          style={{ background: T.header, backdropFilter: "saturate(1.4) blur(10px)", borderBottom: "1px solid " + T.line }}>
           <div className="flex items-center gap-3 md:hidden">
             <button onClick={() => setNavOpen(true)} aria-label="Open menu" className="-ml-1 rounded-md p-1" style={{ color: T.ink }}><Menu size={20} /></button>
             <Brand />
           </div>
           <div className="hidden text-[12px] md:block" style={{ color: T.sub }}>{fmtDate(TODAY.toISOString())}</div>
           <div className="flex items-center gap-1.5">
+            <ThemeSwitcher />
             <NotificationBell ctx={ctx} reqs={visibleReqs} go={go} />
             <RoleSwitcher users={devUsers} user={user} onChange={onSwitchTo} onSignOut={onSignOut} />
           </div>
@@ -339,7 +341,7 @@ function Workspace({ session, devUsers, onSwitchUser, onSignOut, org, assets, se
 
       {toast && (
         <div role={toast.kind === "error" ? "alert" : "status"} className="fixed bottom-20 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2.5 rounded-md px-4 py-2.5 text-[13px] font-medium text-white shadow-xl md:bottom-6 md:left-[calc(50%+120px)]"
-          style={{ background: toast.kind === "error" ? T.bad : T.rail }}>
+          style={{ background: toast.kind === "error" ? PALETTES.light.bad : T.rail }}>
           {toast.kind === "error" ? <AlertTriangle size={16} className="shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" style={{ color: "#9CC9A8" }} />}{toast.msg}
         </div>
       )}

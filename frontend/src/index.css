@@ -18,21 +18,22 @@
   }
   body {
     @apply font-sans;
-    background: #f4f3f0;
-    color: #1a1a1c;
+    /* Variables come from applyTheme() (src/theme.ts); fallbacks are the light palette */
+    background: var(--c-canvas, #f4f3f0);
+    color: var(--c-ink, #1a1a1c);
     font-size: 14px;
     /* Amounts and counts line up in columns */
     font-variant-numeric: tabular-nums;
   }
-  ::selection { background: #f3d3d6; }
+  ::selection { background: var(--c-selection, #f3d3d6); }
   h1, h2, h3 { letter-spacing: -0.01em; }
   input, select, textarea { font: inherit; }
-  input::placeholder, textarea::placeholder { color: #a19f99; }
-  :focus-visible { outline: 2px solid #232326; outline-offset: 2px; border-radius: 4px; }
+  input::placeholder, textarea::placeholder { color: var(--c-placeholder, #a19f99); }
+  :focus-visible { outline: 2px solid var(--c-primary, #232326); outline-offset: 2px; border-radius: 4px; }
   input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: none;
-    border-color: #232326 !important;
-    box-shadow: 0 0 0 3px rgba(35, 35, 38, 0.12);
+    border-color: var(--c-primary, #232326) !important;
+    box-shadow: 0 0 0 3px var(--c-focus-ring, rgba(35, 35, 38, 0.12));
   }
   /* Many controls are hand-styled buttons; give them pointer and press feedback */
   button:not(:disabled) { cursor: pointer; }

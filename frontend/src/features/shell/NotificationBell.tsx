@@ -32,10 +32,10 @@ export function NotificationBell({ ctx, reqs, go }) {
   });
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-black/[0.05]">
+      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-hover">
         <Bell size={17} strokeWidth={1.75} style={{ color: items.length ? T.ink : T.sub }} />
         {items.length > 0 && (
-          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9.5px] font-semibold text-white" style={{ background: T.bad, boxShadow: "0 0 0 2px " + T.canvas }}>
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9.5px] font-semibold" style={{ background: T.bad, color: T.surface, boxShadow: "0 0 0 2px " + T.canvas }}>
             {items.length}
           </span>
         )}
@@ -50,7 +50,7 @@ export function NotificationBell({ ctx, reqs, go }) {
             {items.length === 0 && <div className="px-3 py-4 text-center text-sm" style={{ color: T.sub }}>You are all caught up.</div>}
             {items.map((n) => (
               <button key={n.id} onClick={() => { go("reqdetail", n.r.id); setOpen(false); }}
-                className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-slate-50">
+                className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-hover">
                 <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: n.kind === "escalated" || n.kind === "overdue" ? T.bad : n.kind === "payment" ? T.accent : T.primary }} />
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-semibold" style={{ color: T.ink }}>{n.text}</span>
